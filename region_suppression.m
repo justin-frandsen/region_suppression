@@ -1,11 +1,11 @@
 %-----------------------------------------------------------------------
-% Script: shapeSearch.m
+% Script: region_suppression.m
 % Author: Justin Frandsen
-% Date: 22/07/2025 %dd/mm/yyyy
+% Date: 28/07/2025 %dd/mm/yyyy
 % Description: This script runs a visual search experiment where participants
-%              search for a target shape among distractor shapes. Participants
-%              are given a viewing window after the search duration to see if
-%              exploration leads to distractor learning.
+%              search for a target shape among distractor shapes. One of the distractor shapes 
+%              is sometimes a color distractor and that color is associated with a given region 
+%              of the scene more often
 %
 % Additional Comments:
 % - This script is designed to be run after the setup scripts have been executed.
