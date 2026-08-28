@@ -1,0 +1,67 @@
+# MATLAB
+*.asv
+*.m~
+*.fig
+#*.mat
+*.mex*
+*.mdl
+*.slx
+*.autosave
+*.log
+*.bak
+*.tmp
+*.user
+*.prj
+*.mlproj
+*.mldatx
+*.mlappinstall
+*.mlapp
+*.mltbx
+*.mlpkginstall
+*.mlproj
+*.rpt
+*.out
+*.p
+
+# R
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+.Rproj
+*.Rproj
+*.Rout
+*.Rout.save
+
+# OS generated
+.DS_Store
+**/.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+._*
+
+# General
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Experiment data
+/brad_scripts/
+tester.m
+*.csv
+*.tsv
+*.xlsx
+
+# Ignore results and figures
+/results/
+/figures/
+*.pdf
+#*.png
+#*.jpg
+*.svg
+
+Survey.m
+survey.m
