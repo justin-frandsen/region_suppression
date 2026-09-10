@@ -1,7 +1,7 @@
 %-------------------------------------------------------------------------
 % Script: randomizor_rs.m
 % Author: Justin Frandsen
-% Date: 2026/09/04 yyyy/mm/dd
+% Date: 2026/09/09 yyyy/mm/dd
 % Description: Prerandomizor for the curious_ss experiment.
 %
 % For each subject:
@@ -12,14 +12,12 @@
 %-------------------------------------------------------------------------
 
 %% CONFIGURATION
-SAVE_OUTPUT = true;  % Set to true to save output .mat file
+SAVE_OUTPUT = false;  % Set to true to save output .mat file
 
 % Column constants for scene matrix
 SCENE_ID   = 1;
 REP        = 2;
 RUN        = 3;
-
-.4
 DISTRACTOR = 4;
 TARGET     = 5;
 CONDITION  = 6;
