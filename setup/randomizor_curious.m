@@ -31,8 +31,8 @@ total_scenes            = 108;   % Number of unique scenes
 total_reps_per_scene    = 4;     % Number of times each scene is shown
 
 % Condition configurations
-target_inds             = [1 2 3 4];                   % Indices of target shapes
-distractor_inds         = [1 2 3];                     % Indices of distractor shapes
+target_inds             = 1:22;                   % Indices of target shapes
+distractor_inds         = 1:22;                     % Indices of distractor shapes
 condition_inds          = [1 2 0 0 0 0 0 0];           % First-half conditions
 condition_inds_second   = [0 1 2 0 1 2];               % Second-half conditions
 

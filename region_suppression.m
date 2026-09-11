@@ -35,6 +35,9 @@ rng('shuffle'); % Resets the random # generator
 %% ADD PATHS
 addpath(genpath('setup'));
 
+%% TRIAL STRUCTURE 
+trial_struct = struct();
+
 %% COLUMN NAMES FOR SCENE MATRIX
 SCENE_INDS = 1;
 REP        = 2; % just used to create the randomizor matrix not used in the experiment
@@ -794,3 +797,19 @@ pfp_ptb_cleanup; % cleanup PTB
 %close all; % close all windows
 %clear all; % clear all variables
 sca; % close PTB
+
+function scene_randomizor = assign_balanced_runs(scene_randomizor, total_runs)
+    RUN = 3;
+    num_rows = size(scene_randomizor, 1);
+
+    % Check that the number of rows is divisible by the number of runs
+    assert(mod(num_rows, total_runs) == 0, ...
+        'Total number of rows (%d) must be divisible by total_runs (%d).', ...
+        num_rows, total_runs);
+
+    % Assign a random permutation of run numbers to each group of total_runs rows
+    for i = 1:(num_rows / total_runs)
+        idx = (i - 1) * total_runs + 1;
+        scene_randomizor(idx : idx + total_runs - 1, RUN) = randperm(total_runs);
+    end
+end
