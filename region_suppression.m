@@ -32,23 +32,16 @@ close all;
 clear all;
 sca;
 rng('shuffle'); % Resets the random # generator
+
 %% ADD PATHS
 addpath(genpath('setup'));
-
-%% COLUMN NAMES FOR SCENE MATRIX
-SCENE_INDS = 1;
-REP        = 2; % just used to create the randomizor matrix not used in the experiment
-RUN        = 3; % col contains the run number
-DISTRACTOR = 4;
-TARGET     = 5;
-CONDITION  = 6;
 
 %% -----------------------------------------------------------------------
 % SETTINGS
 % ------------------------------------------------------------------------
 
 % Experiment identifiers
-expName      = 'curious_ss';
+expName      = 'region_suppression';
 
 % Monitor
 refresh_rate = 60;  % Hz
@@ -59,7 +52,7 @@ fixationTimeThreshold   = 50;    % ms, minimum fixation duration to log
 fix.radius              = 90;
 fix.timeout             = 5000;
 fix.reqDur              = 500;
-eye_used             = 2; % 1 = left eye, 2 = right eye, 3 = both eyes want to change this to get it from the tracker later
+eye_used                = 2; % 1 = left eye, 2 = right eye, 3 = both eyes want to change this to get it from the tracker later
 
 % Feedback
 border_line_width = 30;
@@ -110,18 +103,16 @@ eye_output_folder_name  = fullfile(data_folder, 'eye_data');
 edf_output_folder_name  = fullfile(data_folder, 'edf_data');
 mat_output_folder_name  = fullfile(data_folder, 'MAT_data');
 
-stimuli_folder         = 'stimuli';
-scene_folder            = 'stimuli/scenes/main';
-practice_scenes_folder  = 'stimuli/scenes/practice';
-nonsided_shapes         = 'stimuli/shapes/transparent_black';
-shapes_left             = 'stimuli/shapes/black_left_T';
-shapes_right            = 'stimuli/shapes/black_right_T';
-instruction_shapes       = 'stimuli/shapes/instructions';
+stimuli_folder = 'stimuli';
+black_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_black');
+red_shapes     = fullfile(stimuli_folder, 'shapes', 'transparent_red');
+green_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_green');
+blue_shapes    = fullfile(stimuli_folder, 'shapes', 'transparent_blue');
 
 % Output formats
 bx_file_format   = 'bx_Subj%.3dRun%.2d.csv';
 eye_file_format  = 'fixation_data_subj_%.3d_run_%.3d.csv';
-edf_file_format  = 'S%.3dR%.1d.edf';
+edf_file_format  = 'RSS%.2dR%.1d.edf';
 MAT_file_format  = 'subj%.3d_run%.2d.mat';
 
 %% GET SUBJECT INFO
@@ -182,12 +173,16 @@ Screen('Flip', w);
 total_scenes = length(scene_file_paths);
 
 % Load in shape stimuli
-[sorted_nonsided_shapes_file_paths, sorted_nonsided_shapes_textures] = image_stimuli_import(nonsided_shapes, '*.png', w, true);
-[sorted_left_shapes_file_paths, sorted_left_shapes_textures]         = image_stimuli_import(shapes_left, '*.png', w, true);
-[sorted_right_shapes_file_paths, sorted_right_shapes_textures]       = image_stimuli_import(shapes_right, '*.png', w, true);
+stimuli_folder = 'stimuli';
+black_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_black');
+red_shapes     = fullfile(stimuli_folder, 'shapes', 'transparent_red');
+green_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_green');
+blue_shapes    = fullfile(stimuli_folder, 'shapes', 'transparent_blue');
 
-%load in shapes for instructions
-[sorted_instruction_shapes_file_paths, sorted_instruction_shapes_textures] = image_stimuli_import(instruction_shapes, '*.png', w, true);
+[sorted_black_shapes_file_paths, sorted_black_shapes_textures] = image_stimuli_import(black_shapes, '*.png', w, true);
+[sorted_red_shapes_file_paths, sorted_red_shapes_textures]         = image_stimuli_import(red_shapes, '*.png', w, true);
+[sorted_green_shapes_file_paths, sorted_green_shapes_textures]       = image_stimuli_import(green_shapes, '*.png', w, true);
+[sorted_blue_shapes_file_paths, sorted_blue_shapes_textures]        = image_stimuli_import(blue_shapes, '*.png', w, true);
 
 %% Background Screens
 % Screens
@@ -210,7 +205,7 @@ Screen('FillRect', fixation, col.fix, ...
 
 % draw targets textures
 % load randomizor for target shapes
-randomizor = load('trial_structure_files/randomizor.mat'); % load the pre-randomized data
+randomizor = load('trial_structure_files/randomizor_matrix.mat'); % load the pre-randomized data
 randomizor = randomizor.randomizor_matrix; % get the matrix from the struct
 
 %% INITIALIZE EYETRACKER
@@ -247,9 +242,7 @@ for run_looper = run_num:total_runs
     % Preallocate structure for all trials
     if run_looper == 1
         phase = 'practice';
-    elseif run_looper > 1 && run_looper <= 5
-        phase = 'training';
-    elseif run_looper > 5
+    elseif run_looper > 1
         phase = 'testing';
     end
 
@@ -261,7 +254,6 @@ for run_looper = run_num:total_runs
         'scene_idx', [], ...                         % scene index (numerical)
         'scene_file', '', ...                        % scene filename (traceability)
         'target_shape_idx', [], ...                  % target texture index
-        'target_shape_association', [], ...          % associated location/condition
         'target_position', [], ...                   % target position (grid index)
         'target_rect', [], ...                       % target coordinates [x1 y1 x2 y2]
         'critical_distractor_idx', [], ...           % critical distractor texture index
@@ -273,12 +265,44 @@ for run_looper = run_num:total_runs
         'noncritical_distractor_rect2', [], ...      % non-critical distractors (coords)
         'noncritical_distractor_idx3', [], ...        % non-critical distractors (indices)
         'noncritical_distractor_rect3', [], ...      % non-critical distractors (coords)
+        'noncritical_distractor_idx4', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_rect4', [], ...      % non-critical distractors (coords)
+        'noncritical_distractor_idx5', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_rect5', [], ...      % non-critical distractors (coords)
+        'noncritical_distractor_idx6', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_rect6', [], ...      % non-critical distractors (coords)
         'condition', [], ...                         % condition code
-        't_direction', [], ...                       % orientation of T
-        'response_key', '', ...                      % key pressed
-        'response_made', [], ...                     % flag: 1=response, 0=miss
-        'rt', [], ...                                % response time (sec)
-        'accuracy', [], ...                          % 1=correct, 0=incorrect
+        
+                % ---- EYE-TRACKING VARIABLES ----
+        % First saccade (primary capture measure)
+        'first_saccade_latency', [], ...        % ms from search onset to 1st saccade
+        'first_saccade_endpoint_x', [], ...     % x coord where 1st saccade landed
+        'first_saccade_endpoint_y', [], ...     % y coord
+        'first_saccade_aoi', '', ...            % which AOI: 'target','crit_dist','noncrit','none'
+        'first_saccade_direction', [], ...      % angle (deg), optional
+
+        % Capture / suppression flags (derived, but handy to store)
+        'captured_by_crit_dist', [], ...        % 1 if 1st saccade -> critical distractor
+        'saccade_to_target_first', [], ...      % 1 if 1st saccade -> target
+        'crit_dist_at_high_prob', [], ...       % 1 if CD was in high-prob location this trial
+
+        % Time to target (efficiency measure)
+        'time_to_target_fixation', [], ...      % ms from onset to first target fixation
+        'n_fixations_before_target', [], ...    % # fixations before landing on target
+        'target_fixated', [], ...               % 1 if target ever fixated
+
+        % Distractor dwell (suppression can show as reduced dwell)
+        'crit_dist_fixated', [], ...            % 1 if CD ever fixated
+        'crit_dist_dwell_time', [], ...         % total ms fixating CD
+        'crit_dist_n_fixations', [], ...        % # fixations on CD
+
+        % Full trace (for offline flexibility)
+        'fixation_sequence', [], ...            % ordered list of AOIs fixated
+        'fixation_onsets', [], ...              % onset times of each fixation
+        'fixation_durations', [], ...           % duration of each fixation
+        'saccade_count', [], ...                % total saccades this trial
+
+        %system variables
         'trial_onset', [], ...                       % stim onset (absolute)
         'trial_offset', [], ...                      % stim offset (absolute)
         'response_clock_time', [], ...               % time of response key
