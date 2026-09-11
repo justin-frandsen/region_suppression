@@ -35,9 +35,6 @@ rng('shuffle'); % Resets the random # generator
 %% ADD PATHS
 addpath(genpath('setup'));
 
-%% TRIAL STRUCTURE 
-trial_struct = struct();
-
 %% COLUMN NAMES FOR SCENE MATRIX
 SCENE_INDS = 1;
 REP        = 2; % just used to create the randomizor matrix not used in the experiment
