@@ -167,10 +167,9 @@ Screen('BlendFunction', w, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA'); %allows th
 DrawFormattedText(w, 'Loading Images...', 'center', 'center');
 Screen('Flip', w);
 
-[practice_scene_file_paths, practice_scene_textures] = image_stimuli_import(practice_scenes_folder, '', w);
+[practice_scene_file_paths, practice_scene_textures] = image_stimuli_import(fullfile('scenes', 'practice'), '', w);
 
-[scene_file_paths, scene_textures] = image_stimuli_import(scene_folder, '', w);
-total_scenes = length(scene_file_paths);
+[scene_file_paths, scene_textures] = image_stimuli_import(fullfile('scenes', 'main'), '', w);
 
 % Load in shape stimuli
 stimuli_folder = 'stimuli';
