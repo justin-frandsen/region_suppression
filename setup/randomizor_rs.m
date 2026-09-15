@@ -271,7 +271,7 @@ end
 fprintf('\n[CHECK] Target dir counts [left right]: %d %d\n', ...
     sum(all_t(:,1)==0), sum(all_t(:,1)==1));           % expect 216 216
 assert(all(sum(all_t,2) == 3), 'A trial is not 3-left/3-right!');
-fprintf('[CHECK] All trials are 3 left / 3 right ✅\n');
+fprintf('[CHECK] All trials are 3 left / 3 right ✅\n'); %when I asked ai to check this it used the checks which is fun :)
 
 % Condition balance
 all_cond = subj.all_trials(:,4);

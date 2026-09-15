@@ -180,9 +180,9 @@ green_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_green');
 blue_shapes    = fullfile(stimuli_folder, 'shapes', 'transparent_blue');
 
 [sorted_black_shapes_file_paths, sorted_black_shapes_textures] = image_stimuli_import(black_shapes, '*.png', w, true);
-[sorted_red_shapes_file_paths, sorted_red_shapes_textures]         = image_stimuli_import(red_shapes, '*.png', w, true);
-[sorted_green_shapes_file_paths, sorted_green_shapes_textures]       = image_stimuli_import(green_shapes, '*.png', w, true);
-[sorted_blue_shapes_file_paths, sorted_blue_shapes_textures]        = image_stimuli_import(blue_shapes, '*.png', w, true);
+[sorted_red_shapes_file_paths, sorted_red_shapes_textures]     = image_stimuli_import(red_shapes, '*.png', w, true);
+[sorted_green_shapes_file_paths, sorted_green_shapes_textures] = image_stimuli_import(green_shapes, '*.png', w, true);
+[sorted_blue_shapes_file_paths, sorted_blue_shapes_textures]   = image_stimuli_import(blue_shapes, '*.png', w, true);
 
 %% Background Screens
 % Screens
@@ -315,15 +315,19 @@ for run_looper = run_num:total_runs
     previousFixationRect = 0;
 
     %% LOAD DATA FOR THIS SUBJECT AND RUN
-    this_subj_this_run = randomizor.(sprintf('subj%d', sub_num)).(sprintf('run%d', run_looper)); %method of getting into the struct
+    this_subj_this_run    = randomizor.(sprintf('subj%d', sub_num)); %method of getting into the struct
 
-    scene_randomizor = this_subj_this_run.scene_randomizor; % Get the scene randomizor for this subject and run
-    target_inds = this_subj_this_run.first_half_targets;
-    target_associations = this_subj_this_run.target_associations;
-    critical_distractor_inds = this_subj_this_run.first_half_critical_distractors;
-    critical_distractor_associations = this_subj_this_run.critical_distractors_associations;
-    noncritical_distractors = this_subj_this_run.noncritical_distractors;
+    %load practice trials (they are the same for all subjects and runs and lightweight so load everytime)
+    practice_matrix       = randomizor.practice_matrix; % Get the practice trials for this subject and run
+    practice_shapes       = randomizor.practice_shapes;
+    practice_t_directions = randomizor.practice_t_directions;
 
+    % main run vars
+    this_block = this_subj_this_run.blocks{run_looper}; % Get the block for this run which contains: Columns: [scene_id, target_pos, epoch, condition, block]
+    shapes = this_subj_this_run.shape_blocks{run_looper}; % Get the shapes for this run
+    t_directions = this_subj_this_run.t_direction_blocks{run_looper}; % Get the target directions for this run
+
+    high_probability_distractor_location = this_subj_this_run.high_probability_distractor_location; % Get the high probability distractor location for this subject and run
     
     if eyetracking
         % Ensure tracker is connected
@@ -332,7 +336,7 @@ for run_looper = run_num:total_runs
         end
         
         % Create unique EDF filename for this run
-        edf_file_name = sprintf('CSS%.3dR%.1d.edf', sub_num, run_looper);
+        edf_file_name = sprintf(edf_file_format, sub_num, run_looper);
 
         % Open EDF file on Eyelink computer
         i = Eyelink('OpenFile', edf_file_name);
@@ -372,7 +376,7 @@ for run_looper = run_num:total_runs
 
         response = -1; % set response to -1 (missing) at start of each trial
         %% GET TRIAL VARIABLES
-        scene_inds                     = scene_randomizor(trial_looper, SCENE_INDS); % Get the scene index for this trial
+        scene_inds                     = this_block(trial_looper, 1); % Get the scene index for this trial
         possible_positions             = this_subj_this_run.all_possible_locations(trial_looper, :); % Get the possible positions for this trial
         t_directions                   = this_subj_this_run.t_directions(trial_looper, :); % Get the target directions for this trial
         target_index1                  = scene_randomizor(trial_looper, TARGET);
@@ -416,9 +420,6 @@ for run_looper = run_num:total_runs
         Screen('BlendFunction', search, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         % Enable blending for transparency inside this offscreen window
         Screen('BlendFunction', post_search, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        types     = [1 2 3];      % semantic categories: wall/counter/floor
-        positions = [1 2 3 4];    % physical rect indices
 
         % ---- choose the target TYPE for this trial
         % training: trial_condition chooses whether target uses its associated
