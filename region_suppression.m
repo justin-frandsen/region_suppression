@@ -167,16 +167,22 @@ Screen('BlendFunction', w, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA'); %allows th
 DrawFormattedText(w, 'Loading Images...', 'center', 'center');
 Screen('Flip', w);
 
-[practice_scene_file_paths, practice_scene_textures] = image_stimuli_import(fullfile('scenes', 'practice'), '', w);
+[practice_scene_file_paths, practice_scene_textures] = image_stimuli_import(fullfile('stimuli','scenes', 'practice'), '', w);
 
-[scene_file_paths, scene_textures] = image_stimuli_import(fullfile('scenes', 'main'), '', w);
+[scene_file_paths, scene_textures] = image_stimuli_import(fullfile('stimuli', 'scenes', 'main'), '', w);
 
 % Load in shape stimuli
-stimuli_folder = 'stimuli';
-black_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_black');
-red_shapes     = fullfile(stimuli_folder, 'shapes', 'transparent_red');
-green_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_green');
-blue_shapes    = fullfile(stimuli_folder, 'shapes', 'transparent_blue');
+instruction_shapes = fullfile('stimuli', 'shapes', 'instructions');
+black_shapes       = fullfile('stimuli', 'shapes', 'transparent_black');
+left_shapes        = fullfile('stimuli', 'shapes', 'Black_Left_T');
+right_shapes       = fullfile('stimuli', 'shapes', 'Black_Right_T');
+red_shapes         = fullfile('stimuli', 'shapes', 'transparent_red');
+green_shapes       = fullfile('stimuli', 'shapes', 'transparent_green');
+blue_shapes        = fullfile('stimuli', 'shapes', 'transparent_blue');
+
+[sorted_instruction_shapes_file_paths, sorted_instruction_shapes_textures] = image_stimuli_import(instruction_shapes, '*.png', w, true);
+[sorted_left_shapes_file_paths, sorted_left_shapes_textures] = image_stimuli_import(left_shapes, '*.png', w, true);
+[sorted_right_shapes_file_paths, sorted_right_shapes_textures] = image_stimuli_import(right_shapes, '*.png', w, true);
 
 [sorted_black_shapes_file_paths, sorted_black_shapes_textures] = image_stimuli_import(black_shapes, '*.png', w, true);
 [sorted_red_shapes_file_paths, sorted_red_shapes_textures]     = image_stimuli_import(red_shapes, '*.png', w, true);
@@ -426,42 +432,48 @@ for run_looper = run_num:total_runs
 
         % ---- draw CRITICAL DISTRACTOR 
         if trial_condition ~= 0
-            if high_probability_distractor_location == 1
-                possible_crit_positions = [1 2];
-            elseif high_probability_distractor_location == 2
-                possible_crit_positions = [3 4];
-            elseif high_probability_distractor_location == 3
-                possible_crit_positions = [5 6];
-            end
+            % Map each surface (1=wall, 2=counter, 3=floor) to its two positions
+            surface_positions = {[1 2], [3 4], [5 6]};
 
-            % Keep only positions still available (not taken by target)
+            if trial_condition == 1
+                % High-probability surface
+                target_surface = high_probability_distractor_location;
+            else
+                % Low-probability surfaces (the two that are NOT high-prob)
+                low_surfaces   = setdiff([1 2 3], high_probability_distractor_location);
+                target_surface = low_surfaces(trial_condition - 1);  % cond 2->1st, cond 3->2nd
+            end
+        
+            possible_crit_positions = surface_positions{target_surface};
+        
+            % Keep only positions still available (target already removed)
             possible_crit_positions = intersect(possible_crit_positions, remaining_positions, 'stable');
-            
+        
             % Randomly select one (handles 1 or 2 candidates)
             crit_position = possible_crit_positions(randi(numel(possible_crit_positions)));
-
-            % Remove the chosen position from remaining_positions
+        
+            % Remove chosen position from remaining
             remaining_positions = setdiff(remaining_positions, crit_position, 'stable');
-
-            if run_looper > 1
-                crit_rect = saved_positions{scene_inds, crit_pos};
-                if trial_t_directions(4) == 0
-                    % left critical distractor
-                    Screen('DrawTexture', search, sorted_left_shapes_textures(cd_texture_index), [], crit_rect);
-                elseif trial_t_directions(4) == 1
-                    % right critical distractor
-                    Screen('DrawTexture', search, sorted_right_shapes_textures(cd_texture_index), [], crit_rect);
-                end
-
-                if eyetracking
-                    % Define AOIs
-                    Eyelink('command', 'draw_box %d %d %d %d %d', ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)), 7);  % Critical distractor in gray
-                    Eyelink('Message', '!V IAREA RECTANGLE %d %d %d %d %d CritDistBox', rect_id, ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)));
-                    rect_id = rect_id + 1; % Increment rect_id for next AOI
-                end
-            end
+        else
+            crit_position = [];   % absent condition
         end
 
+        if run_looper > 1 && trial_condition ~= 0
+            crit_rect = saved_positions{scene_inds, crit_position};
+            if trial_t_directions(4) == 0
+                % left critical distractor
+                Screen('DrawTexture', search, sorted_left_shapes_textures(crit_position), [], crit_rect);
+            elseif trial_t_directions(4) == 1
+                % right critical distractor
+                Screen('DrawTexture', search, sorted_right_shapes_textures(crit_position), [], crit_rect);
+            end
+            if eyetracking
+                % Define AOIs
+                Eyelink('command', 'draw_box %d %d %d %d %d', ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)), 7);  % Critical distractor in gray
+                Eyelink('Message', '!V IAREA RECTANGLE %d %d %d %d %d CritDistBox', rect_id, ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)));
+                rect_id = 2; % Increment rect_id for next AOI
+            end
+        end
 
         noncrit_rect6 = nan;
         noncrit_ind6 = nan;
@@ -469,25 +481,33 @@ for run_looper = run_num:total_runs
         for k = 1:numel(remaining_positions)
             this_pos  = remaining_positions(k);       % map TYPE → POSITION
             this_rect = saved_positions{scene_inds, this_pos};
-            distractor_texture_index = this_trial_distractors(k);
-            this_distarctor = noncritical_distractors(distractor_texture_index);
+            distractor_texture_index = shapes(trial_looper, this_pos); % Get the distractor shape index for this trial
             if trial_t_directions(1+k) == 0
                 % left non-critical distractor
-                Screen('DrawTexture', search, sorted_left_shapes_textures(this_distarctor), [], this_rect);
+                Screen('DrawTexture', search, sorted_left_shapes_textures(distractor_texture_index), [], this_rect);
             elseif trial_t_directions(1+k) == 1
                 % right non-critical distractor
-                Screen('DrawTexture', search, sorted_right_shapes_textures(this_distarctor), [], this_rect);
+                Screen('DrawTexture', search, sorted_right_shapes_textures(distractor_texture_index), [], this_rect);
             end
 
             if k == 1
                 noncrit_rect1 = this_rect;
-                noncrit_ind1 = this_distarctor;
+                noncrit_ind1 = distractor_texture_index;
             elseif k == 2
                 noncrit_rect2 = this_rect;
-                noncrit_ind2 = this_distarctor;
+                noncrit_ind2 = distractor_texture_index;
             elseif k == 3
                 noncrit_rect3 = this_rect;
-                noncrit_ind3 = this_distarctor;
+                noncrit_ind3 = distractor_texture_index;
+            elseif k == 4
+                noncrit_rect4 = this_rect;
+                noncrit_ind4 = distractor_texture_index;
+            elseif k == 5
+                noncrit_rect5 = this_rect;
+                noncrit_ind5 = distractor_texture_index;
+            elseif k == 6
+                noncrit_rect6 = this_rect;
+                noncrit_ind6 = distractor_texture_index;
             end
 
             if eyetracking
@@ -506,7 +526,7 @@ for run_looper = run_num:total_runs
         Screen('BlendFunction', cue_display, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         % Draw your texture into the offscreen window
-        Screen('DrawTexture', cue_display, sorted_nonsided_shapes_textures(target_texture_index));
+        Screen('DrawTexture', cue_display, sorted_black_shapes_textures(target_inds));
 
         if eyetracking   
             centralFixation(w, height, width, fixation, fix, trial_looper, el, eye_used)
