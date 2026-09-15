@@ -1,11 +1,11 @@
 %-----------------------------------------------------------------------
 % Script: region_suppression.m
 % Author: Justin Frandsen
-% Date: 28/07/2025 %dd/mm/yyyy
+% Date: 15/09/2026 %dd/mm/yyyy
 % Description: This script runs a visual search experiment where participants
-%              search for a target shape among distractor shapes. One of the distractor shapes 
+%              search for a target shape among 6 distractor shapes. One of the distractor shapes 
 %              is sometimes a color distractor and that color is associated with a given region 
-%              of the scene more often
+%              of the scene more often.
 %
 % Additional Comments:
 % - This script is designed to be run after the setup scripts have been executed.
@@ -271,38 +271,37 @@ for run_looper = run_num:total_runs
         'noncritical_distractor_rect5', [], ...      % non-critical distractors (coords)
         'noncritical_distractor_idx6', [], ...        % non-critical distractors (indices)
         'noncritical_distractor_rect6', [], ...      % non-critical distractors (coords)
-        'condition', [], ...                         % condition code
-        
-                % ---- EYE-TRACKING VARIABLES ----
-        % First saccade (primary capture measure)
+        'condition', [], ...                         % condition cod
+        ...     % ---- EYE-TRACKING VARIABLES ----
+        ...     % First saccade (primary capture measure)
         'first_saccade_latency', [], ...        % ms from search onset to 1st saccade
         'first_saccade_endpoint_x', [], ...     % x coord where 1st saccade landed
         'first_saccade_endpoint_y', [], ...     % y coord
         'first_saccade_aoi', '', ...            % which AOI: 'target','crit_dist','noncrit','none'
         'first_saccade_direction', [], ...      % angle (deg), optional
-
-        % Capture / suppression flags (derived, but handy to store)
+        ...
+        ... % Capture / suppression flags (derived, but handy to store)
         'captured_by_crit_dist', [], ...        % 1 if 1st saccade -> critical distractor
         'saccade_to_target_first', [], ...      % 1 if 1st saccade -> target
         'crit_dist_at_high_prob', [], ...       % 1 if CD was in high-prob location this trial
-
-        % Time to target (efficiency measure)
+        ...
+        ... % Time to target (efficiency measure)
         'time_to_target_fixation', [], ...      % ms from onset to first target fixation
         'n_fixations_before_target', [], ...    % # fixations before landing on target
         'target_fixated', [], ...               % 1 if target ever fixated
-
-        % Distractor dwell (suppression can show as reduced dwell)
+        ...
+        ... % Distractor dwell (suppression can show as reduced dwell)
         'crit_dist_fixated', [], ...            % 1 if CD ever fixated
         'crit_dist_dwell_time', [], ...         % total ms fixating CD
         'crit_dist_n_fixations', [], ...        % # fixations on CD
-
-        % Full trace (for offline flexibility)
+        ...
+        ... % Full trace (for offline flexibility)
         'fixation_sequence', [], ...            % ordered list of AOIs fixated
         'fixation_onsets', [], ...              % onset times of each fixation
         'fixation_durations', [], ...           % duration of each fixation
         'saccade_count', [], ...                % total saccades this trial
-
-        %system variables
+        ...
+        ... % System variables
         'trial_onset', [], ...                       % stim onset (absolute)
         'trial_offset', [], ...                      % stim offset (absolute)
         'response_clock_time', [], ...               % time of response key
@@ -326,6 +325,12 @@ for run_looper = run_num:total_runs
     this_block = this_subj_this_run.blocks{run_looper}; % Get the block for this run which contains: Columns: [scene_id, target_pos, epoch, condition, block]
     shapes = this_subj_this_run.shape_blocks{run_looper}; % Get the shapes for this run
     t_directions = this_subj_this_run.t_direction_blocks{run_looper}; % Get the target directions for this run
+
+    if run_looper == 1
+        this_block = practice_matrix; % Use practice trials for the first run
+        shapes = practice_shapes; % Use practice shapes for the first run
+        t_directions = practice_t_directions; % Use practice target directions for the first run
+    end
 
     high_probability_distractor_location = this_subj_this_run.high_probability_distractor_location; % Get the high probability distractor location for this subject and run
     
@@ -375,73 +380,29 @@ for run_looper = run_num:total_runs
         end
 
         response = -1; % set response to -1 (missing) at start of each trial
-        %% GET TRIAL VARIABLES
-        scene_inds                     = this_block(trial_looper, 1); % Get the scene index for this trial
-        possible_positions             = this_subj_this_run.all_possible_locations(trial_looper, :); % Get the possible positions for this trial
-        t_directions                   = this_subj_this_run.t_directions(trial_looper, :); % Get the target directions for this trial
-        target_index1                  = scene_randomizor(trial_looper, TARGET);
-
-        if run_looper <= 5
-            target_texture_index       = target_inds(target_index1);
-            target_association         = target_associations(target_index1); %1 = wall 2 = counter, 3 = floor.
-        elseif run_looper > 5
-            target_texture_index       = critical_distractor_inds(target_index1); %in testing we use the critical distractor shapes as targets
-            target_association         = critical_distractor_associations(target_index1); %1 = wall 2 = counter, 3 = floor.
-        end
-        
-        trial_condition                = scene_randomizor(trial_looper, CONDITION);
-        this_run_distractors           = this_subj_this_run.this_run_distractors(trial_looper, :);
-        length_this_run_distractors    = length(this_run_distractors);
-        this_trial_distractors         = noncritical_distractors(1:length_this_run_distractors-1); % remove the last one which is just the run number
-
-        % get critical distractor info if in training phase
-        if run_looper <= 5 && run_looper > 1
-            critical_distractor_index1 = scene_randomizor(trial_looper, DISTRACTOR);
-            cd_texture_index = critical_distractor_inds(critical_distractor_index1);
-            critical_distractor_association = critical_distractor_associations(critical_distractor_index1);
-        else
-            cd_texture_index = NaN; % no critical distractor in testing phase
-            critical_distractor_association = NaN;
-        end
 
         %% DRAW SCENE   
         search = Screen('OpenOffscreenWindow', scrID, col.bg, rect, 32);
-        post_search = Screen('OpenOffscreenWindow', scrID, col.bg, rect, 32);
+
         % Draw the scene texture
+        scene_inds = this_block(trial_looper, 1); % Get the scene index for this trial
         if run_looper == 1
             Screen('DrawTexture', search, practice_scene_textures(scene_inds), [], rect);
-            Screen('DrawTexture', post_search, practice_scene_textures(scene_inds), [], rect);
         else
             Screen('DrawTexture', search, scene_textures(scene_inds), [], rect);
-            Screen('DrawTexture', post_search, scene_textures(scene_inds), [], rect);
         end
 
         % Enable blending for transparency inside this offscreen window
         Screen('BlendFunction', search, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        % Enable blending for transparency inside this offscreen window
-        Screen('BlendFunction', post_search, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        % ---- choose the target TYPE for this trial
-        % training: trial_condition chooses whether target uses its associated
-        % location or one of the other two
-        switch trial_condition
-            case 0
-                target_type = target_association;  % use its associated type
-            case 1
-                tmp = setdiff(types, target_association);
-                target_type = tmp(1);
-            case 2
-                tmp = setdiff(types, target_association);
-                target_type = tmp(2);
-            otherwise
-                error('Unexpected trial_condition value.');
-        end
         
-
         % ---- map TYPE → POSITION and draw TARGET
-        target_position    = possible_positions(target_type);               % e.g., 1..4
+        all_positions       = 1:6; % 6 possible positions
+        target_position     = this_block(trial_looper, 2); % Get the target position for this trial
         target_rect        = saved_positions{scene_inds, target_position};  % use POSITION!
-        remaining_positions = setdiff(possible_positions, target_position, 'stable');  % remaining positions for distractors dont sort
+        remaining_positions = setdiff(all_positions, target_position, 'stable');  % remaining positions for distractors dont sort
+
+        target_inds = shapes(trial_looper, target_position); % Get the target shape index for this trial
+        trial_t_directions = t_directions(trial_looper, :); % Get the target directions for this trial
 
         if eyetracking
             % Define AOIs
@@ -449,57 +410,74 @@ for run_looper = run_num:total_runs
             Eyelink('Message', '!V IAREA RECTANGLE 1 %d %d %d %d TargetBox', ceil(target_rect(1)), ceil(target_rect(2)), ceil(target_rect(3)), ceil(target_rect(4)));
         end
 
-        if t_directions(1) == 0
+        
+        if trial_t_directions(1) == 0
             % left target
-            Screen('DrawTexture', search, sorted_left_shapes_textures(target_texture_index), [], target_rect);
-        elseif t_directions(1) == 1
+            Screen('DrawTexture', search, sorted_left_shapes_textures(target_inds), [], target_rect);
+        elseif trial_t_directions(1) == 1
             % right target  
-            Screen('DrawTexture', search, sorted_right_shapes_textures(target_texture_index), [], target_rect);
+            Screen('DrawTexture', search, sorted_right_shapes_textures(target_inds), [], target_rect);
         end
         
-        crit_dist_position = []; 
-        rect_id = 2; % ID for critical distractor AOI
-        
-        % ---- draw CRITICAL DISTRACTOR only in training
-        if run_looper <= 5 && run_looper > 1
-            crit_pos  = possible_positions(4); % 4th entry encodes CD position
-            remaining_positions = setdiff(remaining_positions, crit_pos, 'stable'); % remove CD position from remaining positions
-            crit_rect = saved_positions{scene_inds, crit_pos};
-            if t_directions(4) == 0
-                % left critical distractor
-                Screen('DrawTexture', search, sorted_left_shapes_textures(cd_texture_index), [], crit_rect);
-                Screen('DrawTexture', post_search, sorted_left_shapes_textures(cd_texture_index), [], crit_rect);
-            elseif t_directions(4) == 1
-                % right critical distractor
-                Screen('DrawTexture', search, sorted_right_shapes_textures(cd_texture_index), [], crit_rect);
-                Screen('DrawTexture', post_search, sorted_right_shapes_textures(cd_texture_index), [], crit_rect);
+        if run_looper == 1
+            trial_condition = 0;
+        else
+            trial_condition = this_block(trial_looper, 4); % Get the condition for this trial
+        end
+
+        % ---- draw CRITICAL DISTRACTOR 
+        if trial_condition ~= 0
+            if high_probability_distractor_location == 1
+                possible_crit_positions = [1 2];
+            elseif high_probability_distractor_location == 2
+                possible_crit_positions = [3 4];
+            elseif high_probability_distractor_location == 3
+                possible_crit_positions = [5 6];
             end
 
-            if eyetracking
-                % Define AOIs
-                Eyelink('command', 'draw_box %d %d %d %d %d', ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)), 7);  % Critical distractor in gray
-                Eyelink('Message', '!V IAREA RECTANGLE %d %d %d %d %d CritDistBox', rect_id, ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)));
-                rect_id = rect_id + 1; % Increment rect_id for next AOI
+            % Keep only positions still available (not taken by target)
+            possible_crit_positions = intersect(possible_crit_positions, remaining_positions, 'stable');
+            
+            % Randomly select one (handles 1 or 2 candidates)
+            crit_position = possible_crit_positions(randi(numel(possible_crit_positions)));
+
+            % Remove the chosen position from remaining_positions
+            remaining_positions = setdiff(remaining_positions, crit_position, 'stable');
+
+            if run_looper > 1
+                crit_rect = saved_positions{scene_inds, crit_pos};
+                if trial_t_directions(4) == 0
+                    % left critical distractor
+                    Screen('DrawTexture', search, sorted_left_shapes_textures(cd_texture_index), [], crit_rect);
+                elseif trial_t_directions(4) == 1
+                    % right critical distractor
+                    Screen('DrawTexture', search, sorted_right_shapes_textures(cd_texture_index), [], crit_rect);
+                end
+
+                if eyetracking
+                    % Define AOIs
+                    Eyelink('command', 'draw_box %d %d %d %d %d', ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)), 7);  % Critical distractor in gray
+                    Eyelink('Message', '!V IAREA RECTANGLE %d %d %d %d %d CritDistBox', rect_id, ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)));
+                    rect_id = rect_id + 1; % Increment rect_id for next AOI
+                end
             end
         end
 
 
-        noncrit_rect3 = nan;
-        noncrit_ind3 = nan;
+        noncrit_rect6 = nan;
+        noncrit_ind6 = nan;
 
         for k = 1:numel(remaining_positions)
             this_pos  = remaining_positions(k);       % map TYPE → POSITION
             this_rect = saved_positions{scene_inds, this_pos};
             distractor_texture_index = this_trial_distractors(k);
             this_distarctor = noncritical_distractors(distractor_texture_index);
-            if t_directions(1+k) == 0
+            if trial_t_directions(1+k) == 0
                 % left non-critical distractor
                 Screen('DrawTexture', search, sorted_left_shapes_textures(this_distarctor), [], this_rect);
-                Screen('DrawTexture', post_search, sorted_left_shapes_textures(this_distarctor), [], this_rect);
-            elseif t_directions(1+k) == 1
+            elseif trial_t_directions(1+k) == 1
                 % right non-critical distractor
                 Screen('DrawTexture', search, sorted_right_shapes_textures(this_distarctor), [], this_rect);
-                Screen('DrawTexture', post_search, sorted_right_shapes_textures(this_distarctor), [], this_rect);
             end
 
             if k == 1
