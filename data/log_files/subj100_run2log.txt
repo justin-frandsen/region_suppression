@@ -1,0 +1,18 @@
+--- Session Log ---
+Subject ID: 100
+Run Number: 2
+Date: 2026-09-18
+Experimenter: JF
+Session Start: 14:50:41
+Session End:   14:57:08
+Total Trials:  72
+
+--- System Info ---
+OS: Microsoft Windows 11 Enterprise
+MATLAB Version: 26.1.0.3346908 (R2026a) Update 5
+Psychtoolbox Version: 3.0.19 - Flavor: Unknown, 27-Nov-2023 09:37:05
+
+--- Display Info ---
+Screen Resolution: 1920x1080
+Refresh Rate: 32 Hz
+Screen Number: 2

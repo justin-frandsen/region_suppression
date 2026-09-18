@@ -253,17 +253,19 @@ for run_looper = run_num:total_runs
     end
 
     %% INITIALIZE BX STRUCT
+    if run_looper == 1
+        total_trials = 8;
+    else
+        total_trials = 72;
+    end
+
+    clear bx_trial_info   % prevent "dissimilar structures" across runs
+
     % Preallocate structure for all trials
     if run_looper == 1
         phase = 'practice';
     elseif run_looper > 1
         phase = 'testing';
-    end
-    %% Loop through trials
-    if run_looper == 1
-        total_trials = 8;
-    elseif run_looper > 1
-        total_trials = 72;
     end
 
     bx_trial_info(1:total_trials) = struct( ...
@@ -279,55 +281,33 @@ for run_looper = run_num:total_runs
         'critical_distractor_idx', [], ...           % critical distractor texture index
         'critical_distractor_association', [], ...   % critical distractor association
         'critical_distractor_rect', [], ...          % critical distractor coords
-        'noncritical_distractor_idx1', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_idx1', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect1', [], ...      % non-critical distractors (coords)
-        'noncritical_distractor_idx2', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_idx2', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect2', [], ...      % non-critical distractors (coords)
-        'noncritical_distractor_idx3', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_idx3', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect3', [], ...      % non-critical distractors (coords)
-        'noncritical_distractor_idx4', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_idx4', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect4', [], ...      % non-critical distractors (coords)
-        'noncritical_distractor_idx5', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_idx5', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect5', [], ...      % non-critical distractors (coords)
-        'noncritical_distractor_idx6', [], ...        % non-critical distractors (indices)
+        'noncritical_distractor_idx6', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect6', [], ...      % non-critical distractors (coords)
-        'condition', [], ...                         % condition cod
-        ...     % ---- EYE-TRACKING VARIABLES ----
-        ...     % First saccade (primary capture measure)
-        'first_saccade_latency', [], ...        % ms from search onset to 1st saccade
-        'first_saccade_endpoint_x', [], ...     % x coord where 1st saccade landed
-        'first_saccade_endpoint_y', [], ...     % y coord
-        'first_saccade_aoi', '', ...            % which AOI: 'target','crit_dist','noncrit','none'
-        'first_saccade_direction', [], ...      % angle (deg), optional
+        'condition', [], ...                         % condition code
+        't_direction', [], ...                       % target T-direction (0=left,1=right)
         ...
-        ... % Capture / suppression flags (derived, but handy to store)
-        'captured_by_crit_dist', [], ...        % 1 if 1st saccade -> critical distractor
-        'saccade_to_target_first', [], ...      % 1 if 1st saccade -> target
-        'crit_dist_at_high_prob', [], ...       % 1 if CD was in high-prob location this trial
+        ... % ---- RESPONSE VARIABLES ----
+        'rt', [], ...                                % reaction time (ms)
+        'accuracy', [], ...                          % 1=correct, 0=incorrect, -1=no response
+        'response_made', [], ...                     % logical: did subject respond
+        'response_key', '', ...                      % key pressed
         ...
-        ... % Time to target (efficiency measure)
-        'time_to_target_fixation', [], ...      % ms from onset to first target fixation
-        'n_fixations_before_target', [], ...    % # fixations before landing on target
-        'target_fixated', [], ...               % 1 if target ever fixated
-        ...
-        ... % Distractor dwell (suppression can show as reduced dwell)
-        'crit_dist_fixated', [], ...            % 1 if CD ever fixated
-        'crit_dist_dwell_time', [], ...         % total ms fixating CD
-        'crit_dist_n_fixations', [], ...        % # fixations on CD
-        ...
-        ... % Full trace (for offline flexibility)
-        'fixation_sequence', [], ...            % ordered list of AOIs fixated
-        'fixation_onsets', [], ...              % onset times of each fixation
-        'fixation_durations', [], ...           % duration of each fixation
-        'saccade_count', [], ...                % total saccades this trial
-        ...
-        ... % System variables
+        ... % ---- SYSTEM VARIABLES ----
         'trial_onset', [], ...                       % stim onset (absolute)
         'trial_offset', [], ...                      % stim offset (absolute)
         'response_clock_time', [], ...               % time of response key
         'timestamp', '' ...                          % optional formatted datetime
     );
-
 
     fixationCounter = 0;
     currentFixationRect = 0;
@@ -379,7 +359,7 @@ for run_looper = run_num:total_runs
         % Send run start message
         Eyelink('Message', 'Experiment start Subject %d Run %d', sub_num, run_looper);
     end
-    
+
     % show instructions
     showInstructions(w, sorted_instruction_shapes_textures, key.left, key.right);
 
@@ -709,7 +689,10 @@ for run_looper = run_num:total_runs
         bx_trial_info(trial_looper).timestamp = datestr(now, 'yyyy-mm-dd HH:MM:SS.FFF');
 
         feedback_duration = 0.5; % seconds
-        Eyelink('Message', 'END_TIME SEARCH_PERIOD');
+        if eyetracking
+            Eyelink('Message', 'END_TIME SEARCH_PERIOD');
+        end
+
         if trial_accuracy == 1
             DrawFormattedText(w, 'Correct!', 'center', 'center', col.fg);
         else
@@ -817,3 +800,32 @@ pfp_ptb_cleanup; % cleanup PTB
 %close all; % close all windows
 %clear all; % clear all variables
 sca; % close PTB
+
+%        ...     % ---- EYE-TRACKING VARIABLES ----
+%        ...     % First saccade (primary capture measure)
+%        'first_saccade_latency', [], ...        % ms from search onset to 1st saccade
+%        'first_saccade_endpoint_x', [], ...     % x coord where 1st saccade landed
+%        'first_saccade_endpoint_y', [], ...     % y coord
+%        'first_saccade_aoi', '', ...            % which AOI: 'target','crit_dist','noncrit','none'
+%        'first_saccade_direction', [], ...      % angle (deg), optional
+%        ...
+%        ... % Capture / suppression flags (derived, but handy to store)
+%        'captured_by_crit_dist', [], ...        % 1 if 1st saccade -> critical distractor
+%        'saccade_to_target_first', [], ...      % 1 if 1st saccade -> target
+%        'crit_dist_at_high_prob', [], ...       % 1 if CD was in high-prob location this trial
+%        ...
+%        ... % Time to target (efficiency measure)
+%        'time_to_target_fixation', [], ...      % ms from onset to first target fixation
+%        'n_fixations_before_target', [], ...    % # fixations before landing on target
+%        'target_fixated', [], ...               % 1 if target ever fixated
+%        ...
+%        ... % Distractor dwell (suppression can show as reduced dwell)
+%        'crit_dist_fixated', [], ...            % 1 if CD ever fixated
+%        'crit_dist_dwell_time', [], ...         % total ms fixating CD
+%        'crit_dist_n_fixations', [], ...        % # fixations on CD
+%        ...
+%        ... % Full trace (for offline flexibility)
+%        'fixation_sequence', [], ...            % ordered list of AOIs fixated
+%        'fixation_onsets', [], ...              % onset times of each fixation
+%        'fixation_durations', [], ...           % duration of each fixation
+%        'saccade_count', [], ...                % total saccades this trial
