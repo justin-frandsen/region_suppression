@@ -48,6 +48,10 @@ total_trials       = n_blocks * trials_per_block;   % 432
 n_shapes_per_trial = 6;
 n_shape_options    = 22;
 
+n_colors   = 3;
+base_chunk = repmat(1:n_colors, 1, 2);   % [1 2 3 1 2 3]
+chunk_len  = numel(base_chunk);          % 6
+
 % Interleaved position order (surface-alternating): wall,counter,floor,...
 % positions 1,2=wall  3,4=counter  5,6=floor
 interleaved = [1 3 5 2 4 6];
@@ -181,6 +185,24 @@ for sub_num = 1:total_subs
     high_probability_distractor_location = mod(sub_num - 1, 3) + 1;
 
     % ---------------------------------------------------------------
+    % Color assignment: 3 colors, balanced per block
+    %   - build shuffled chunks of [1 2 3 1 2 3] and concatenate
+    %   - guarantees equal color counts, max run of a single color = 4
+    % ---------------------------------------------------------------
+    assert(mod(trials_per_block, chunk_len) == 0, ...
+        'trials_per_block must be divisible by chunk length.');
+    chunks_per_block = trials_per_block / chunk_len;    % 12
+
+    color_blocks = cell(1, n_blocks);
+    for b = 1:n_blocks
+        block_colors = [];
+        for c = 1:chunks_per_block
+            block_colors = [block_colors, base_chunk(randperm(chunk_len))];
+        end
+        color_blocks{b} = block_colors';   % 72x1 column vector
+    end
+
+    % ---------------------------------------------------------------
     % Store into subject struct
     % ---------------------------------------------------------------
     subject_struct.high_probability_distractor_location = high_probability_distractor_location;
@@ -188,6 +210,7 @@ for sub_num = 1:total_subs
     subject_struct.blocks              = blocks;              % 1x6 cell, each 72x5
     subject_struct.shape_blocks        = shape_blocks;        % 1x6 cell, each 72x6
     subject_struct.t_direction_blocks  = t_direction_blocks;  % 1x6 cell, each 72x6
+    subject_struct.color_blocks        = color_blocks;        % 1x6 cell, each 72x1
     subject_struct.all_trials          = all_trials;          % full 432x5 (optional)
 
     randomizor_matrix.(sub_struct_name) = subject_struct;
@@ -288,3 +311,17 @@ ok = all(arrayfun(@(r) numel(unique(all_shapes_check(r,:)))==n_shapes_per_trial,
                   1:total_trials));
 assert(ok, 'A trial has duplicate distractor shapes!');
 fprintf('[CHECK] All trials have 6 distinct shapes ✅\n');
+
+% Color balance and max-run check
+all_color = [];
+for b = 1:n_blocks
+    all_color = [all_color; subj.color_blocks{b}];
+end
+fprintf('[CHECK] Color counts [1 2 3]: %d %d %d\n', ...
+    sum(all_color==1), sum(all_color==2), sum(all_color==3));   % expect 144 each
+
+d = [true; diff(all_color) ~= 0];
+run_lengths = diff([find(d); numel(all_color)+1]);
+fprintf('[CHECK] Max color run length: %d (expect <= 4)\n', max(run_lengths));
+assert(max(run_lengths) <= 4, 'Color run exceeds 4!');
+fprintf('[CHECK] Color runs within bounds ✅\n');

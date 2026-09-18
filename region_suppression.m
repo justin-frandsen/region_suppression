@@ -176,18 +176,28 @@ instruction_shapes = fullfile('stimuli', 'shapes', 'instructions');
 black_shapes       = fullfile('stimuli', 'shapes', 'transparent_black');
 left_shapes        = fullfile('stimuli', 'shapes', 'Black_Left_T');
 right_shapes       = fullfile('stimuli', 'shapes', 'Black_Right_T');
-red_shapes         = fullfile('stimuli', 'shapes', 'transparent_red');
-green_shapes       = fullfile('stimuli', 'shapes', 'transparent_green');
-blue_shapes        = fullfile('stimuli', 'shapes', 'transparent_blue');
+green_left_shapes  = fullfile('stimuli', 'shapes', 'Green_Left_T');
+green_right_shapes = fullfile('stimuli', 'shapes', 'Green_Right_T');
+blue_left_shapes   = fullfile('stimuli', 'shapes', 'Blue_Left_T');
+blue_right_shapes  = fullfile('stimuli', 'shapes', 'Blue_Right_T');
+mag_left_shapes    = fullfile('stimuli', 'shapes', 'Mag_Left_T');
+mag_right_shapes   = fullfile('stimuli', 'shapes', 'Mag_Right_T');
 
 [sorted_instruction_shapes_file_paths, sorted_instruction_shapes_textures] = image_stimuli_import(instruction_shapes, '*.png', w, true);
 [sorted_left_shapes_file_paths, sorted_left_shapes_textures] = image_stimuli_import(left_shapes, '*.png', w, true);
 [sorted_right_shapes_file_paths, sorted_right_shapes_textures] = image_stimuli_import(right_shapes, '*.png', w, true);
 
-[sorted_black_shapes_file_paths, sorted_black_shapes_textures] = image_stimuli_import(black_shapes, '*.png', w, true);
-[sorted_red_shapes_file_paths, sorted_red_shapes_textures]     = image_stimuli_import(red_shapes, '*.png', w, true);
-[sorted_green_shapes_file_paths, sorted_green_shapes_textures] = image_stimuli_import(green_shapes, '*.png', w, true);
-[sorted_blue_shapes_file_paths, sorted_blue_shapes_textures]   = image_stimuli_import(blue_shapes, '*.png', w, true);
+[sorted_black_shapes_file_paths, sorted_black_shapes_textures] = image_stimuli_import(black_shapes, '*.png', w, true); %cue shapes
+
+%magenta shapes
+[sorted_left_mag_shapes_file_paths, sorted_left_mag_shapes_textures]     = image_stimuli_import(mag_left_shapes, '*.png', w, true);
+[sorted_right_mag_shapes_file_paths, sorted_right_mag_shapes_textures]     = image_stimuli_import(mag_right_shapes, '*.png', w, true);
+%green shapes
+[sorted_left_green_shapes_file_paths, sorted_left_green_shapes_textures] = image_stimuli_import(green_left_shapes, '*.png', w, true);
+[sorted_right_green_shapes_file_paths, sorted_right_green_shapes_textures] = image_stimuli_import(green_right_shapes, '*.png', w, true);
+%blue shapes
+[sorted_left_blue_shapes_file_paths, sorted_left_blue_shapes_textures] = image_stimuli_import(blue_left_shapes, '*.png', w, true);
+[sorted_right_blue_shapes_file_paths, sorted_right_blue_shapes_textures] = image_stimuli_import(blue_right_shapes, '*.png', w, true);
 
 %% Background Screens
 % Screens
@@ -330,6 +340,7 @@ for run_looper = run_num:total_runs
     this_block = this_subj_this_run.blocks{run_looper}; % Get the block for this run which contains: Columns: [scene_id, target_pos, epoch, condition, block]
     shapes = this_subj_this_run.shape_blocks{run_looper}; % Get the shapes for this run
     t_directions = this_subj_this_run.t_direction_blocks{run_looper}; % Get the target directions for this run
+    colors = this_subj_this_run.color_blocks{run_looper}; % Get the colors for this run
 
     if run_looper == 1
         this_block = practice_matrix; % Use practice trials for the first run
@@ -403,7 +414,7 @@ for run_looper = run_num:total_runs
         % ---- map TYPE → POSITION and draw TARGET
         all_positions       = 1:6; % 6 possible positions
         target_position     = this_block(trial_looper, 2); % Get the target position for this trial
-        target_rect        = saved_positions{scene_inds, target_position};  % use POSITION!
+        target_rect         = saved_positions{scene_inds, target_position};  % use POSITION!
         remaining_positions = setdiff(all_positions, target_position, 'stable');  % remaining positions for distractors dont sort
 
         target_inds = shapes(trial_looper, target_position); % Get the target shape index for this trial
@@ -460,12 +471,30 @@ for run_looper = run_num:total_runs
 
         if run_looper > 1 && trial_condition ~= 0
             crit_rect = saved_positions{scene_inds, crit_position};
-            if trial_t_directions(4) == 0
+            if trial_t_directions(6) == 0
                 % left critical distractor
-                Screen('DrawTexture', search, sorted_left_shapes_textures(crit_position), [], crit_rect);
-            elseif trial_t_directions(4) == 1
+                if colors(trial_looper) == 1
+                    % green critical distractor
+                    Screen('DrawTexture', search, sorted_left_mag_shapes_textures(crit_position), [], crit_rect);
+                elseif colors(trial_looper) == 2
+                    % blue critical distractor
+                    Screen('DrawTexture', search, sorted_left_green_shapes_textures(crit_position), [], crit_rect);
+                elseif colors(trial_looper) == 3
+                    % magenta critical distractor
+                    Screen('DrawTexture', search, sorted_left_blue_shapes_textures(crit_position), [], crit_rect);
+                end
+            elseif trial_t_directions(6) == 1
                 % right critical distractor
-                Screen('DrawTexture', search, sorted_right_shapes_textures(crit_position), [], crit_rect);
+                if colors(trial_looper) == 1
+                    % green critical distractor
+                    Screen('DrawTexture', search, sorted_right_mag_shapes_textures(crit_position), [], crit_rect);
+                elseif colors(trial_looper) == 2
+                    % blue critical distractor
+                    Screen('DrawTexture', search, sorted_right_green_shapes_textures(crit_position), [], crit_rect);
+                elseif colors(trial_looper) == 3
+                    % magenta critical distractor
+                    Screen('DrawTexture', search, sorted_right_blue_shapes_textures(crit_position), [], crit_rect);
+                end
             end
             if eyetracking
                 % Define AOIs
@@ -650,6 +679,12 @@ for run_looper = run_num:total_runs
         bx_trial_info(trial_looper).noncritical_distractor_rect2  = noncrit_rect2;
         bx_trial_info(trial_looper).noncritical_distractor_idx3   = noncrit_ind3;
         bx_trial_info(trial_looper).noncritical_distractor_rect3  = noncrit_rect3;
+        bx_trial_info(trial_looper).noncritical_distractor_idx4   = noncrit_ind4;
+        bx_trial_info(trial_looper).noncritical_distractor_rect4  = noncrit_rect4;
+        bx_trial_info(trial_looper).noncritical_distractor_idx5   = noncrit_ind5;
+        bx_trial_info(trial_looper).noncritical_distractor_rect5  = noncrit_rect5;
+        bx_trial_info(trial_looper).noncritical_distractor_idx6   = noncrit_ind6;
+        bx_trial_info(trial_looper).noncritical_distractor_rect6  = noncrit_rect6;
 
         % Condition / stimulus info
         bx_trial_info(trial_looper).condition   = trial_condition;
@@ -816,19 +851,3 @@ pfp_ptb_cleanup; % cleanup PTB
 %close all; % close all windows
 %clear all; % clear all variables
 sca; % close PTB
-
-function scene_randomizor = assign_balanced_runs(scene_randomizor, total_runs)
-    RUN = 3;
-    num_rows = size(scene_randomizor, 1);
-
-    % Check that the number of rows is divisible by the number of runs
-    assert(mod(num_rows, total_runs) == 0, ...
-        'Total number of rows (%d) must be divisible by total_runs (%d).', ...
-        num_rows, total_runs);
-
-    % Assign a random permutation of run numbers to each group of total_runs rows
-    for i = 1:(num_rows / total_runs)
-        idx = (i - 1) * total_runs + 1;
-        scene_randomizor(idx : idx + total_runs - 1, RUN) = randperm(total_runs);
-    end
-end
