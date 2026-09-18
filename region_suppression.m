@@ -59,7 +59,6 @@ border_line_width = 30;
 penalty           = 2000;  % ms
 timeout           = 5000;  % ms
 post_search_duration = 5;  % sec
-feedback_duration   = 0.2; % sec
 
 % Trial control
 main_runs      = 6;
@@ -260,6 +259,12 @@ for run_looper = run_num:total_runs
     elseif run_looper > 1
         phase = 'testing';
     end
+    %% Loop through trials
+    if run_looper == 1
+        total_trials = 8;
+    elseif run_looper > 1
+        total_trials = 72;
+    end
 
     bx_trial_info(1:total_trials) = struct( ...
         'sub_num', sub_num, ...                      % subject ID
@@ -378,13 +383,6 @@ for run_looper = run_num:total_runs
     % show instructions
     showInstructions(w, sorted_instruction_shapes_textures, key.left, key.right);
 
-    %% Loop through trials
-    if run_looper == 1
-        total_trials = 8;
-    elseif run_looper > 1
-        total_trials = 72;
-    end
-
     for trial_looper = 1:total_trials
         if eyetracking
             Eyelink('command', 'clear_screen 0'); % optional: clear tracker display
@@ -471,39 +469,46 @@ for run_looper = run_num:total_runs
 
         if run_looper > 1 && trial_condition ~= 0
             crit_rect = saved_positions{scene_inds, crit_position};
+            crit_inds = shapes(trial_looper, crit_position); % Get the critical distractor shape index for this trial
             if trial_t_directions(6) == 0
                 % left critical distractor
                 if colors(trial_looper) == 1
                     % green critical distractor
-                    Screen('DrawTexture', search, sorted_left_mag_shapes_textures(crit_position), [], crit_rect);
+                    Screen('DrawTexture', search, sorted_left_mag_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 2
                     % blue critical distractor
-                    Screen('DrawTexture', search, sorted_left_green_shapes_textures(crit_position), [], crit_rect);
+                    Screen('DrawTexture', search, sorted_left_green_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 3
                     % magenta critical distractor
-                    Screen('DrawTexture', search, sorted_left_blue_shapes_textures(crit_position), [], crit_rect);
+                    Screen('DrawTexture', search, sorted_left_blue_shapes_textures(crit_inds), [], crit_rect);
                 end
             elseif trial_t_directions(6) == 1
                 % right critical distractor
                 if colors(trial_looper) == 1
                     % green critical distractor
-                    Screen('DrawTexture', search, sorted_right_mag_shapes_textures(crit_position), [], crit_rect);
+                    Screen('DrawTexture', search, sorted_right_mag_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 2
                     % blue critical distractor
-                    Screen('DrawTexture', search, sorted_right_green_shapes_textures(crit_position), [], crit_rect);
+                    Screen('DrawTexture', search, sorted_right_green_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 3
                     % magenta critical distractor
-                    Screen('DrawTexture', search, sorted_right_blue_shapes_textures(crit_position), [], crit_rect);
+                    Screen('DrawTexture', search, sorted_right_blue_shapes_textures(crit_inds), [], crit_rect);
                 end
             end
             if eyetracking
                 % Define AOIs
                 Eyelink('command', 'draw_box %d %d %d %d %d', ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)), 7);  % Critical distractor in gray
-                Eyelink('Message', '!V IAREA RECTANGLE %d %d %d %d %d CritDistBox', rect_id, ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)));
-                rect_id = 2; % Increment rect_id for next AOI
+                Eyelink('Message', '!V IAREA RECTANGLE %d %d %d %d %d CritDistBox', 2, ceil(crit_rect(1)), ceil(crit_rect(2)), ceil(crit_rect(3)), ceil(crit_rect(4)));
             end
         end
 
+        if trial_condition == 0
+            rect_id = 2; % Start rect_id at 2 for non-critical distractors
+        elseif trial_condition ~= 0
+            rect_id = 3; % Start rect_id at 3 for non-critical distractors
+        end
+        
+        %set these as nan because on some trials there will be less than 6 non-critical distractors
         noncrit_rect6 = nan;
         noncrit_ind6 = nan;
 
@@ -562,23 +567,23 @@ for run_looper = run_num:total_runs
         else
             % Fixation cross just drawn for when testing.
             Screen('DrawTexture', w, fixation);
-            Screen('flip', w);
+            Screen('Flip', w);
             WaitSecs(.5)
         end
         
         % CUE DISPLAY
         Screen('DrawTexture', w, cue_display);
-        Screen('flip', w);
+        Screen('Flip', w);
 
         if eyetracking
-            Eyelink('Message','CUE_ONSET %d', target_texture_index);
+            Eyelink('Message','CUE_ONSET %d', target_inds);
         end
 
         % Draw fixation cross
         Screen('DrawTexture', w, fixation);
         WaitSecs(1); % 1 second cue
         
-        Screen('flip', w); %flip to show fixation cross again
+        Screen('Flip', w); %Flip to show fixation cross again
 
         if eyetracking
             Eyelink('Message','FIXATION_ONSET_2');
@@ -588,7 +593,7 @@ for run_looper = run_num:total_runs
         WaitSecs(1); % 1 second central fixation
 
         %% SEARCH DISPLAY
-        stimOnsetTime = Screen('Flip', w); %this flip displays the scene with all four shapes
+        stimOnsetTime = Screen('Flip', w); %this Flip displays the scene with all four shapes
 
         if eyetracking
             Eyelink('Message', 'START_TIME SEARCH_PERIOD');
@@ -604,6 +609,7 @@ for run_looper = run_num:total_runs
         trialActive  = true;
         RT = -999; % Initialize RT as -999
         trial_accuracy = -1; % Initialize accuracy as -1 (no response)
+        secs = NaN; % Initialize secs as NaN
 
         while trialActive && (GetSecs - stimOnsetTime) < search_display_duration
             [key_is_down, secs, key_code] = KbCheck;
@@ -627,13 +633,13 @@ for run_looper = run_num:total_runs
             end
         end
 
-        if t_directions(1) == 0 && strcmp(response, key.left)
+        if trial_t_directions(1) == 0 && strcmp(response, key.left)
             trial_accuracy = 1;
-        elseif t_directions(1) == 1 && strcmp(response, key.right)
+        elseif trial_t_directions(1) == 1 && strcmp(response, key.right)
             trial_accuracy = 1;
-        elseif t_directions(1) == 1 && strcmp(response, key.left)
+        elseif trial_t_directions(1) == 1 && strcmp(response, key.left)
             trial_accuracy = 0;
-        elseif t_directions(1) == 0 && strcmp(response, key.right)
+        elseif trial_t_directions(1) == 0 && strcmp(response, key.right)
             trial_accuracy = 0;
         end
 
@@ -651,21 +657,20 @@ for run_looper = run_num:total_runs
         % Scene info
         bx_trial_info(trial_looper).scene_idx                = scene_inds;
         if run_looper == 1
-            bx_trial_info(trial_looper).scene_file               = practice_scene_file_paths{scene_inds};
+            bx_trial_info(trial_looper).scene_file           = practice_scene_file_paths{scene_inds};
         else
-            bx_trial_info(trial_looper).scene_file               = scene_file_paths{scene_inds};
+            bx_trial_info(trial_looper).scene_file           = scene_file_paths{scene_inds};
         end
 
         % Target info
-        bx_trial_info(trial_looper).target_shape_idx         = target_texture_index;
-        bx_trial_info(trial_looper).target_shape_association = target_association;
+        bx_trial_info(trial_looper).target_shape_idx         = target_inds;
         bx_trial_info(trial_looper).target_position          = target_position;
         bx_trial_info(trial_looper).target_rect              = target_rect;
         
         % Distractors
-        if run_looper <= 5 && run_looper > 1
-            bx_trial_info(trial_looper).critical_distractor_idx         = cd_texture_index;
-            bx_trial_info(trial_looper).critical_distractor_association = critical_distractor_association;
+        if run_looper > 1 && trial_condition ~= 0
+            bx_trial_info(trial_looper).critical_distractor_idx         = crit_inds;
+            bx_trial_info(trial_looper).critical_distractor_association = high_probability_distractor_location;
             bx_trial_info(trial_looper).critical_distractor_rect        = crit_rect;
         else
             bx_trial_info(trial_looper).critical_distractor_idx         = NaN;
@@ -688,7 +693,7 @@ for run_looper = run_num:total_runs
 
         % Condition / stimulus info
         bx_trial_info(trial_looper).condition   = trial_condition;
-        bx_trial_info(trial_looper).t_direction = t_directions(1);
+        bx_trial_info(trial_looper).t_direction = trial_t_directions(1);
 
         % Response
         bx_trial_info(trial_looper).rt            = RT;
@@ -703,65 +708,26 @@ for run_looper = run_num:total_runs
         % Timestamp (human-readable string, e.g., for debugging logs)
         bx_trial_info(trial_looper).timestamp = datestr(now, 'yyyy-mm-dd HH:MM:SS.FFF');
 
-
-        post_search_duration = 4; % 4 seconds
-        feedback_duration = 0.2; % seconds
-        post_viewing = true;
-
-        % if incorrect give feedback (red border) for 200 ms then show post search screen for remaining time
-        % if correct show post search screen for full duration
-        if run_looper <= 5 && run_looper > 1
-            if trial_accuracy == 0
-                resp_color = col.red;
-                Screen('DrawTexture', w, post_search);
-                Screen('FrameRect', w, resp_color, rect, border_line_width);
-                Screen('flip', w);
-                % Eyelink message for feedback onset
-                if eyetracking
-                    Eyelink('Message', 'END_TIME SEARCH_PERIOD');
-                    Eyelink('Message', 'START_TIME POST_SEARCH_PERIOD');
-                    Eyelink('Message', 'Feedback: Incorrect onset / Post-search onset');
-                end
-
-                WaitSecs(feedback_duration); % 200 ms
-                Screen('DrawTexture', w, post_search);
-                Screen('flip', w);
-
-                % Eyelink message for feedback offset / post-search onset
-                if eyetracking
-                    Eyelink('Message', 'Feedback: Incorrect offset / Post-search continued');
-                end
-
-                WaitSecs(post_search_duration-feedback_duration)
-            elseif trial_accuracy == 1
-                resp_color = col.green;
-                Screen('DrawTexture', w, post_search);
-                Screen('flip', w);
-
-                % Eyelink message for correct feedback/post-search
-                if eyetracking
-                    Eyelink('Message', 'END_TIME SEARCH_PERIOD');
-                    Eyelink('Message', 'START_TIME POST_SEARCH_PERIOD');
-                end
-
-                WaitSecs(post_search_duration)
-            end
-        elseif run_looper == 1 || run_looper > 4
-            if trial_accuracy == false
-                DrawFormattedText(w, 'Incorrect!', 'center', 'center', col.fg);
-                Screen('Flip', w);
-                WaitSecs(.5); % Wait for 2 seconds before closing
-            end
+        feedback_duration = 0.5; % seconds
+        Eyelink('Message', 'END_TIME SEARCH_PERIOD');
+        if trial_accuracy == 1
+            DrawFormattedText(w, 'Correct!', 'center', 'center', col.fg);
+        else
+            DrawFormattedText(w, 'Incorrect!', 'center', 'center', col.fg);
         end
-        %draw blank ITI
-        Screen('flip', w);
+        Screen('Flip', w);
 
         if eyetracking
-            if run_looper <= 5 && run_looper > 1
-                Eyelink('Message', 'END_TIME POST_SEARCH_PERIOD');
-            elseif run_looper == 1 || run_looper > 5
-                Eyelink('Message', 'END_TIME SEARCH_PERIOD');
-            end
+            Eyelink('Message', 'START_TIME FEEDBACK_PERIOD');        
+        end
+        
+        WaitSecs(feedback_duration); % give feedback for .5 seconds before closing
+
+        %draw blank ITI
+        Screen('Flip', w);
+
+        if eyetracking
+            Eyelink('Message', 'END_TIME FEEDBACK_PERIOD');
             Eyelink('Message', '!V IAREA END');
             Eyelink('Message', '!V TRIAL_VAR RT %d', RT);
             Eyelink('Message', '!V TRIAL_VAR acc %d', trial_accuracy);
