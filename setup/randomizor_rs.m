@@ -193,13 +193,39 @@ for sub_num = 1:total_subs
         'trials_per_block must be divisible by chunk length.');
     chunks_per_block = trials_per_block / chunk_len;    % 12
 
+    % ---------------------------------------------------------------
+    % Color assignment: only present trials (condition ~= 0) get a color
+    %   - absent trials (condition == 0) -> NaN (no color)
+    %   - colors balanced across present trials within each block
+    % ---------------------------------------------------------------
+        % ---------------------------------------------------------------
+    % Color assignment: balanced WITHIN each condition type
+    %   - condition 0 (absent) -> NaN (no color)
+    %   - conditions 1,2,3 each get colors split evenly across 3 colors
+    %   - guarantees color is orthogonal to condition
+    % ---------------------------------------------------------------
+    n_colors      = 3;
+    all_colors    = nan(total_trials, 1);          % default NaN = no color
+    present_conds = [1 2 3];
+
+    for c = present_conds
+        cond_idx = find(all_trials(:, 4) == c);    % trials of this condition
+        n_c      = numel(cond_idx);
+
+        % Build balanced, shuffled color vector for this condition
+        cond_colors = repmat((1:n_colors)', ceil(n_c / n_colors), 1);
+        cond_colors = cond_colors(1:n_c);          % trim to exact count
+        cond_colors = cond_colors(randperm(n_c));  % shuffle
+
+        all_colors(cond_idx) = cond_colors;
+    end
+
+    % Split colors into blocks (parallel to trial blocks)
     color_blocks = cell(1, n_blocks);
     for b = 1:n_blocks
-        block_colors = [];
-        for c = 1:chunks_per_block
-            block_colors = [block_colors, base_chunk(randperm(chunk_len))];
-        end
-        color_blocks{b} = block_colors';   % 72x1 column vector
+        row_start = (b-1)*trials_per_block + 1;
+        row_end   = b*trials_per_block;
+        color_blocks{b} = all_colors(row_start:row_end);
     end
 
     % ---------------------------------------------------------------

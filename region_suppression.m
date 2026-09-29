@@ -240,7 +240,7 @@ trialcounter = 0;
 for run_looper = run_num:total_runs
     % LOG FILE SETTINGS
     logFile = sprintf('data/log_files/subj%d_run%dlog.txt', sub_num, run_looper);
-    sessionStart = now;
+    sessionStart = datetime('now');
 
     if run_looper == 1
         % Load in the shape positions
@@ -294,6 +294,7 @@ for run_looper = run_num:total_runs
         'noncritical_distractor_idx6', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect6', [], ...      % non-critical distractors (coords)
         'condition', [], ...                         % condition code
+        'color', [], ...                             % critical distractor color (1/2/3; NaN if absent)
         't_direction', [], ...                       % target T-direction (0=left,1=right)
         ...
         ... % ---- RESPONSE VARIABLES ----
@@ -580,11 +581,13 @@ for run_looper = run_num:total_runs
             Eyelink('Message', 'START_TIME SEARCH_PERIOD');
             Eyelink('Message', 'SYNCTIME');
             Eyelink('Message', '!V TRIAL_VAR condition %d', trial_condition);
+            Eyelink('Message', '!V TRIAL_VAR color %d', colors(trial_looper));
             Eyelink('Message', '!V TRIAL_VAR trial_num %d', trial_looper);
             Eyelink('Message', '!V TRIAL_VAR sub_num %d', sub_num);
             Eyelink('Message', '!V TRIAL_VAR block %d', run_looper);
             Eyelink('Message', '!V TRIAL_VAR scene %d', scene_inds);
         end
+        
         % --- Wait for response or until deadline ---
         responseMade = false;
         trialActive  = true;
@@ -674,6 +677,11 @@ for run_looper = run_num:total_runs
 
         % Condition / stimulus info
         bx_trial_info(trial_looper).condition   = trial_condition;
+        if run_looper > 1 && trial_condition ~= 0
+            bx_trial_info(trial_looper).color = colors(trial_looper);   % 1/2/3
+        else
+            bx_trial_info(trial_looper).color = NaN;                    % no colored distractor
+        end
         bx_trial_info(trial_looper).t_direction = trial_t_directions(1);
 
         % Response
@@ -687,7 +695,7 @@ for run_looper = run_num:total_runs
         end
 
         % Timestamp (human-readable string, e.g., for debugging logs)
-        bx_trial_info(trial_looper).timestamp = datestr(now, 'yyyy-mm-dd HH:MM:SS.FFF');
+        bx_trial_info(trial_looper).timestamp = datestr(datetime('now'), 'yyyy-mm-dd HH:MM:SS.FFF');
 
         feedback_duration = 0.5; % seconds
         if eyetracking
@@ -744,8 +752,12 @@ for run_looper = run_num:total_runs
 
     %% SAVE BX DATA
     % log session info
-    sessionEnd = now;
-    log_session_info(sub_num, run_looper, experimenter_initials, total_trials, sessionStart, sessionEnd, logFile, eyetracking, edf_file_name, edf_transfer_ok);
+    sessionEnd = datetime('now');
+    if eyetracking
+        log_session_info(sub_num, run_looper, experimenter_initials, total_trials, sessionStart, sessionEnd, logFile, eyetracking, edf_file_name, edf_transfer_ok);
+    else
+        log_session_info(sub_num, run_looper, experimenter_initials, total_trials, sessionStart, sessionEnd, logFile, eyetracking);
+    end
     
     % save trial data to CSV
     trialTable = struct2table(bx_trial_info);

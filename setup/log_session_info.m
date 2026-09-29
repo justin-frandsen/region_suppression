@@ -8,6 +8,13 @@ function log_session_info(subjectID, runNum, experimenter_initials, totalTrials,
 %   startTime    - output of now() when session starts
 %   endTime      - output of now() when session ends
 %   logFilePath  - full path to log file (e.g., 'data/subj101_log.txt')
+%   edf_transfer_ok - (optional) true/false whether the EDF file transferred
+%                     successfully. Omit or pass [] if unknown.
+
+    % ---- default for optional transfer-status arg ----
+    if nargin < 10 || isempty(edf_transfer_ok)
+        edf_transfer_ok = NaN;   % unknown / not provided
+    end
 
     % Convert time to readable format
     startStr = datestr(startTime, 'yyyy-mm-dd HH:MM:SS');
