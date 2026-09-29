@@ -346,6 +346,7 @@ for run_looper = run_num:total_runs
 
         % Open EDF file on Eyelink computer
         i = Eyelink('OpenFile', edf_file_name);
+        Eyelink('Message', 'DISPLAY_COORDS 0 0 %d %d', width-1, height-1);
         if i ~= 0
             fprintf('Cannot create EDF file ''%s''.\n', edf_file_name);
             Eyelink('Shutdown');
@@ -725,40 +726,26 @@ for run_looper = run_num:total_runs
     %% SAVE EYETRACKING DATA
     if eyetracking
         Eyelink('Message', 'Experiment end Subject %d Run %d', sub_num, run_looper);
-        % Go idle and close file
-        Eyelink('Command', 'set_idle_mode');
+
+        % ---- REQUIRED SEQUENCE ----
+        Eyelink('SetOfflineMode');
+        Eyelink('Command', 'clear_screen 0');
         WaitSecs(0.5);
-        status = Eyelink('CloseFile'); %close the EDF file
+
+        status = Eyelink('CloseFile');
         if status ~= 0
-            fprintf('CloseFile failed with status %d\n', status);
+            warning('CloseFile returned status %d', status);
         end
-        
-        % Wait a bit longer for safety
-        WaitSecs(2);
+        WaitSecs(0.5);
 
-        % Full local path to save EDF file
-        localPath = fullfile(edf_output_folder_name, edf_file_name);
-
-        maxTries = 3;
-        for attempt = 1:maxTries
-            try
-                status = Eyelink('ReceiveFile', edf_file_name, localPath, 1);
-                if status > 0 && exist(localPath, 'file')
-                    fprintf('EDF transfer succeeded on attempt %d\n', attempt);
-                    break;
-                else
-                    warning('EDF transfer attempt %d failed, retrying...\n', attempt);
-                end
-            catch
-                warning('Error during ReceiveFile attempt %d\n', attempt);
-            end
-        end
+        % ---- TRANSFER EDF ----
+        edf_transfer_ok = transferEDF(edf_file_name, edf_output_folder_name, eyetracking, w, el, height);
     end
 
     %% SAVE BX DATA
     % log session info
     sessionEnd = now;
-    log_session_info(sub_num, run_looper, experimenter_initials, total_trials, sessionStart, sessionEnd, logFile, eyetracking, edf_file_name);
+    log_session_info(sub_num, run_looper, experimenter_initials, total_trials, sessionStart, sessionEnd, logFile, eyetracking, edf_file_name, edf_transfer_ok);
     
     % save trial data to CSV
     trialTable = struct2table(bx_trial_info);
@@ -801,31 +788,33 @@ pfp_ptb_cleanup; % cleanup PTB
 %clear all; % clear all variables
 sca; % close PTB
 
-%        ...     % ---- EYE-TRACKING VARIABLES ----
-%        ...     % First saccade (primary capture measure)
-%        'first_saccade_latency', [], ...        % ms from search onset to 1st saccade
-%        'first_saccade_endpoint_x', [], ...     % x coord where 1st saccade landed
-%        'first_saccade_endpoint_y', [], ...     % y coord
-%        'first_saccade_aoi', '', ...            % which AOI: 'target','crit_dist','noncrit','none'
-%        'first_saccade_direction', [], ...      % angle (deg), optional
-%        ...
-%        ... % Capture / suppression flags (derived, but handy to store)
-%        'captured_by_crit_dist', [], ...        % 1 if 1st saccade -> critical distractor
-%        'saccade_to_target_first', [], ...      % 1 if 1st saccade -> target
-%        'crit_dist_at_high_prob', [], ...       % 1 if CD was in high-prob location this trial
-%        ...
-%        ... % Time to target (efficiency measure)
-%        'time_to_target_fixation', [], ...      % ms from onset to first target fixation
-%        'n_fixations_before_target', [], ...    % # fixations before landing on target
-%        'target_fixated', [], ...               % 1 if target ever fixated
-%        ...
-%        ... % Distractor dwell (suppression can show as reduced dwell)
-%        'crit_dist_fixated', [], ...            % 1 if CD ever fixated
-%        'crit_dist_dwell_time', [], ...         % total ms fixating CD
-%        'crit_dist_n_fixations', [], ...        % # fixations on CD
-%        ...
-%        ... % Full trace (for offline flexibility)
-%        'fixation_sequence', [], ...            % ordered list of AOIs fixated
-%        'fixation_onsets', [], ...              % onset times of each fixation
-%        'fixation_durations', [], ...           % duration of each fixation
-%        'saccade_count', [], ...                % total saccades this trial
+function ok = transferEDF(edf_file_name, edf_output_folder_name, eyetracking, window, el, height)
+ok = false;
+if ~eyetracking, return; end
+try
+    Screen('FillRect', window, el.backgroundcolour);
+    Screen('DrawText', window, 'Receiving data file...', 5, height-35, 0);
+    Screen('Flip', window);
+
+    localPath = fullfile(edf_output_folder_name, edf_file_name);
+    maxTries  = 5;
+    for attempt = 1:maxTries
+        if ~Eyelink('IsConnected')
+            warning('Link down before transfer attempt %d', attempt);
+            WaitSecs(1); 
+            continue;
+        end
+        status = Eyelink('ReceiveFile', edf_file_name, localPath, 1);
+        if status > 0 && exist(localPath, 'file')
+            fprintf('EDF transfer succeeded (attempt %d): %.1f KB\n', attempt, status/1024);
+            ok = true;
+            return;
+        end
+        warning('EDF transfer attempt %d failed (status %d), retrying...', attempt, status);
+        WaitSecs(1 + attempt);   % escalating wait
+    end
+    warning('EDF transfer FAILED after %d attempts. File may still be on Host PC: %s', maxTries, edf_file_name);
+catch ME
+    warning('Problem receiving EDF ''%s'': %s', edf_file_name, ME.message);
+end
+end

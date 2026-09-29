@@ -1,4 +1,4 @@
-function log_session_info(subjectID, runNum, experimenter_initials, totalTrials, startTime, endTime, logFilePath, eyetracking, edfFileName)
+function log_session_info(subjectID, runNum, experimenter_initials, totalTrials, startTime, endTime, logFilePath, eyetracking, edfFileName, edf_transfer_ok)
 % log_session_info
 % Logs basic session metadata to a plain .txt log file
 %
@@ -68,6 +68,14 @@ function log_session_info(subjectID, runNum, experimenter_initials, totalTrials,
 
         fprintf(fid, 'Sample Rate: %s Hz\n', Eyelink('Command', 'sample_rate?'));
         fprintf(fid, 'Calibration: completed\n');
+        
+        if isnan(edf_transfer_ok)
+            fprintf(fid, 'EDF Transfer: UNKNOWN (status not provided)\n');
+        elseif edf_transfer_ok
+            fprintf(fid, 'EDF Transfer: SUCCESS\n');
+        else
+            fprintf(fid, 'EDF Transfer: FAILED - retrieve %s from Host PC manually!\n', edfFileName);
+        end
     end
     fclose(fid);
     fprintf('[INFO] Session log saved to %s\n', logFilePath);
