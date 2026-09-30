@@ -1,10 +1,10 @@
 --- Session Log ---
 Subject ID: 100
 Run Number: 1
-Date: 2026-09-18
+Date: 2026-09-30
 Experimenter: JF
-Session Start: 14:49:59
-Session End:   14:50:35
+Session Start: 11:58:51
+Session End:   12:00:01
 Total Trials:  8
 
 --- System Info ---
@@ -14,5 +14,5 @@ Psychtoolbox Version: 3.0.19 - Flavor: Unknown, 27-Nov-2023 09:37:05
 
 --- Display Info ---
 Screen Resolution: 1920x1080
-Refresh Rate: 32 Hz
+Refresh Rate: 60 Hz
 Screen Number: 2
