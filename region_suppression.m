@@ -522,7 +522,7 @@ for run_looper = run_num:total_runs
                 noncrit_rect5 = this_rect;
                 noncrit_ind5 = distractor_texture_index;
             elseif k == 6
-                noncrit_rect6 = this_rect;
+                noncrit_rect6 = this_rect; 
                 noncrit_ind6 = distractor_texture_index;
             end
 

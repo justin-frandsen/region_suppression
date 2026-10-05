@@ -83,7 +83,7 @@ function log_session_info(subjectID, runNum, experimenter_initials, totalTrials,
         else
             fprintf(fid, 'EDF Transfer: FAILED - retrieve %s from Host PC manually!\n', edfFileName);
         end
-    elseif  ~eyetracking
+    elseif ~eyetracking
         fprintf(fid, '\n--- EyeLink Info ---\n');
         fprintf(fid, 'EyeLink: NOT USED\n');
         fprintf(fid, 'Dummy Mode: ACTIVE\n');
