@@ -65,3 +65,6 @@ tester.m
 
 Survey.m
 survey.m
+
+# Python virtual environments
+**/.venv/
