@@ -47,7 +47,7 @@ expName      = 'region_suppression';
 refresh_rate = 60;  % Hz
 
 % Eyetracker
-eyetracking             = false; % true = real eyetracking, false = no eyetracking
+eyetracking             = true; % true = real eyetracking, false = no eyetracking
 fixationTimeThreshold   = 50;    % ms, minimum fixation duration to log
 fix.radius              = 90;
 fix.timeout             = 5000;
@@ -491,8 +491,8 @@ for run_looper = run_num:total_runs
         end
         
         %set these as nan because on some trials there will be less than 6 non-critical distractors
-        noncrit_rect6 = nan;
-        noncrit_ind6 = nan;
+        noncrit_rect5 = nan;
+        noncrit_ind5 = nan;
 
         for k = 1:numel(remaining_positions)
             this_pos  = remaining_positions(k);       % map TYPE → POSITION
@@ -521,9 +521,6 @@ for run_looper = run_num:total_runs
             elseif k == 5
                 noncrit_rect5 = this_rect;
                 noncrit_ind5 = distractor_texture_index;
-            elseif k == 6
-                noncrit_rect6 = this_rect; 
-                noncrit_ind6 = distractor_texture_index;
             end
 
             if eyetracking
@@ -581,7 +578,9 @@ for run_looper = run_num:total_runs
             Eyelink('Message', 'START_TIME SEARCH_PERIOD');
             Eyelink('Message', 'SYNCTIME');
             Eyelink('Message', '!V TRIAL_VAR condition %d', trial_condition);
-            Eyelink('Message', '!V TRIAL_VAR color %d', colors(trial_looper));
+            color = colors(trial_looper);
+            if isnan(color), color = 0; end
+            Eyelink('Message', '!V TRIAL_VAR color %d', color);
             Eyelink('Message', '!V TRIAL_VAR trial_num %d', trial_looper);
             Eyelink('Message', '!V TRIAL_VAR sub_num %d', sub_num);
             Eyelink('Message', '!V TRIAL_VAR block %d', run_looper);
@@ -672,8 +671,6 @@ for run_looper = run_num:total_runs
         bx_trial_info(trial_looper).noncritical_distractor_rect4  = noncrit_rect4;
         bx_trial_info(trial_looper).noncritical_distractor_idx5   = noncrit_ind5;
         bx_trial_info(trial_looper).noncritical_distractor_rect5  = noncrit_rect5;
-        bx_trial_info(trial_looper).noncritical_distractor_idx6   = noncrit_ind6;
-        bx_trial_info(trial_looper).noncritical_distractor_rect6  = noncrit_rect6;
 
         % Condition / stimulus info
         bx_trial_info(trial_looper).condition   = trial_condition;
