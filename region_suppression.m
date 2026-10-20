@@ -369,6 +369,7 @@ for run_looper = run_num:total_runs
         if eyetracking
             Eyelink('command', 'clear_screen 0'); % optional: clear tracker display
             Eyelink('Message', 'TRIALID %d', trial_looper); % support said to put this before the recording starts
+            Eyelink('command', 'record_status_message "Trial %d/%d"', trial_looper, total_trials);
             Eyelink('StartRecording');
             WaitSecs(0.1); % Wait for 100 ms to allow the tracker to
             HideCursor(scrID);         % Hide mouse cursor before the next trial
@@ -744,7 +745,7 @@ for run_looper = run_num:total_runs
         if status ~= 0
             warning('CloseFile returned status %d', status);
         end
-        WaitSecs(0.5);
+        WaitSecs(4);
 
         % ---- TRANSFER EDF ----
         edf_transfer_ok = transferEDF(edf_file_name, edf_output_folder_name, eyetracking, w, el, height);
