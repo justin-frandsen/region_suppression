@@ -47,7 +47,7 @@ expName      = 'region_suppression';
 refresh_rate = 60;  % Hz
 
 % Eyetracker
-eyetracking             = true; % true = real eyetracking, false = no eyetracking
+eyetracking             = false; % true = real eyetracking, false = no eyetracking
 fixationTimeThreshold   = 50;    % ms, minimum fixation duration to log
 fix.radius              = 90;
 fix.timeout             = 5000;
@@ -318,7 +318,7 @@ for run_looper = run_num:total_runs
     this_subj_this_run    = randomizor.(sprintf('subj%d', sub_num)); %method of getting into the struct
 
     %load practice trials (they are the same for all subjects and runs and lightweight so load everytime)
-    if run == 1
+    if run_looper == 1
         this_block = randomizor.practice_matrix; % Use practice trials for the first run
         shapes = randomizor.practice_shapes; % Use practice shapes for the first run
         t_directions =  randomizor.practice_t_directions; % Use practice target directions for the first run
