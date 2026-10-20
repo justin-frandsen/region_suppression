@@ -318,20 +318,16 @@ for run_looper = run_num:total_runs
     this_subj_this_run    = randomizor.(sprintf('subj%d', sub_num)); %method of getting into the struct
 
     %load practice trials (they are the same for all subjects and runs and lightweight so load everytime)
-    practice_matrix       = randomizor.practice_matrix; % Get the practice trials for this subject and run
-    practice_shapes       = randomizor.practice_shapes;
-    practice_t_directions = randomizor.practice_t_directions;
-
-    % main run vars
-    this_block = this_subj_this_run.blocks{run_looper}; % Get the block for this run which contains: Columns: [scene_id, target_pos, epoch, condition, block]
-    shapes = this_subj_this_run.shape_blocks{run_looper}; % Get the shapes for this run
-    t_directions = this_subj_this_run.t_direction_blocks{run_looper}; % Get the target directions for this run
-    colors = this_subj_this_run.color_blocks{run_looper}; % Get the colors for this run
-
-    if run_looper == 1
-        this_block = practice_matrix; % Use practice trials for the first run
-        shapes = practice_shapes; % Use practice shapes for the first run
-        t_directions = practice_t_directions; % Use practice target directions for the first run
+    if run == 1
+        this_block = randomizor.practice_matrix; % Use practice trials for the first run
+        shapes = randomizor.practice_shapes; % Use practice shapes for the first run
+        t_directions =  randomizor.practice_t_directions; % Use practice target directions for the first run
+    else
+        % main run vars
+        this_block = this_subj_this_run.blocks{run_looper-1}; % Get the block for this run which contains: Columns: [scene_id, target_pos, epoch, condition, block]
+        shapes = this_subj_this_run.shape_blocks{run_looper-1}; % Get the shapes for this run
+        t_directions = this_subj_this_run.t_direction_blocks{run_looper-1}; % Get the target directions for this run
+        colors = this_subj_this_run.color_blocks{run_looper-1}; % Get the colors for this run
     end
 
     high_probability_distractor_location = this_subj_this_run.high_probability_distractor_location; % Get the high probability distractor location for this subject and run
