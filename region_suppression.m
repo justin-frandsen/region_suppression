@@ -109,7 +109,7 @@ green_shapes   = fullfile(stimuli_folder, 'shapes', 'transparent_green');
 blue_shapes    = fullfile(stimuli_folder, 'shapes', 'transparent_blue');
 
 % Output formats
-bx_file_format   = 'bx_Subj%.3dRun%.2d.csv';
+bx_file_format   = 'Subj%dRun%02d.csv'; % must match the name used when saving at end of run
 eye_file_format  = 'fixation_data_subj_%.3d_run_%.3d.csv';
 edf_file_format  = 'RSS%.2dR%.1d.edf';
 MAT_file_format  = 'subj%.3d_run%.2d.mat';
@@ -120,7 +120,7 @@ MAT_file_format  = 'subj%.3d_run%.2d.mat';
 %% MAKE SURE data directory and its subdirectories exist
 subdirs = {'bx_data', 'edf_data', 'eye_data', 'log_files', 'MAT_data'};
 
-if ~exist(data_folder, 'dir')
+if ~isfolder(data_folder)
     [status, msg] = mkdir(data_folder);
     if ~status
         error('Failed to create directory: %s', msg);
@@ -129,7 +129,7 @@ end
 
 for i = 1:length(subdirs)
     subdir_path = fullfile(data_folder, subdirs{i});
-    if ~exist(subdir_path, 'dir')
+    if ~isfolder(subdir_path)
         [status, msg] = mkdir(subdir_path);
         if ~status
             error('Failed to create directory: %s', msg);
@@ -140,19 +140,19 @@ end
 %% TEST IF OUTPUT FILES EXIST
 % Test if bx output file already exists
 bx_file_name = sprintf(bx_file_format, sub_num, run_num);
-if exist(fullfile(bx_output_folder_name, bx_file_name), 'file')
+if isfile(fullfile(bx_output_folder_name, bx_file_name))
     error('Subject bx file already exists. Delete the file to rerun with the same subject number.');
 end
 
 % Test if preprocessed eyemovement data file already exists
 eye_file_name = sprintf(eye_file_format, sub_num, run_num);
-if exist(fullfile(eye_output_folder_name, eye_file_name), 'file')
+if isfile(fullfile(eye_output_folder_name, eye_file_name))
     error('Subject eye file already exists. Delete the file to rerun with the same subject number.');
 end
 
 % Test if .edf file already exists
 edf_file_name = sprintf(edf_file_format, sub_num, run_num);
-if exist(fullfile(edf_output_folder_name, edf_file_name), 'file')
+if isfile(fullfile(edf_output_folder_name, edf_file_name))
     error('Subject edf file already exists. Delete the file to rerun with the same subject number.');
 end
 
@@ -225,7 +225,7 @@ randomizor = randomizor.randomizor_matrix; % get the matrix from the struct
 %% INITIALIZE EYETRACKER
 if eyetracking
     % Initialize Eyelink
-    if ~exist(edf_output_folder_name, 'dir')
+    if ~isfolder(edf_output_folder_name)
         mkdir(edf_output_folder_name);
     end
     
@@ -291,8 +291,6 @@ for run_looper = run_num:total_runs
         'noncritical_distractor_rect4', [], ...      % non-critical distractors (coords)
         'noncritical_distractor_idx5', [], ...       % non-critical distractors (indices)
         'noncritical_distractor_rect5', [], ...      % non-critical distractors (coords)
-        'noncritical_distractor_idx6', [], ...       % non-critical distractors (indices)
-        'noncritical_distractor_rect6', [], ...      % non-critical distractors (coords)
         'condition', [], ...                         % condition code
         'color', [], ...                             % critical distractor color (1/2/3; NaN if absent)
         't_direction', [], ...                       % target T-direction (0=left,1=right)
@@ -323,10 +321,12 @@ for run_looper = run_num:total_runs
     practice_t_directions = randomizor.practice_t_directions;
 
     % main run vars
-    this_block = this_subj_this_run.blocks{run_looper}; % Get the block for this run which contains: Columns: [scene_id, target_pos, epoch, condition, block]
-    shapes = this_subj_this_run.shape_blocks{run_looper}; % Get the shapes for this run
-    t_directions = this_subj_this_run.t_direction_blocks{run_looper}; % Get the target directions for this run
-    colors = this_subj_this_run.color_blocks{run_looper}; % Get the colors for this run
+    % Run 1 is practice, so runs 2-7 map onto main blocks 1-6
+    block_idx = max(run_looper - practice_runs, 1);
+    this_block = this_subj_this_run.blocks{block_idx}; % Get the block for this run which contains: Columns: [scene_id, target_pos, epoch, condition, block]
+    shapes = this_subj_this_run.shape_blocks{block_idx}; % Get the shapes for this run
+    t_directions = this_subj_this_run.t_direction_blocks{block_idx}; % Get the target directions for this run
+    colors = this_subj_this_run.color_blocks{block_idx}; % Get the colors for this run
 
     if run_looper == 1
         this_block = practice_matrix; % Use practice trials for the first run
@@ -372,6 +372,16 @@ for run_looper = run_num:total_runs
             Eyelink('command', 'record_status_message "Trial %d/%d"', trial_looper, total_trials);
             Eyelink('StartRecording');
             WaitSecs(0.1); % Wait for 100 ms to allow the tracker to
+
+            % Ask the tracker which eye it is recording (only valid while
+            % recording): 0 = left, 1 = right, 2 = binocular, -1 = unknown.
+            % eye_used indexes samp.gx/gy, where 1 = left and 2 = right.
+            eye_available = Eyelink('EyeAvailable');
+            if eye_available == 0 || eye_available == 1
+                eye_used = eye_available + 1;
+            elseif eye_available == 2
+                eye_used = 1; % binocular: use the left eye
+            end % otherwise keep the previous/default eye_used
             HideCursor(scrID);         % Hide mouse cursor before the next trial
             SetMouse(10, 10, scrID);   % Move the mouse to the corner -- in case some jerk has unhidden it 
         end
@@ -491,9 +501,9 @@ for run_looper = run_num:total_runs
             rect_id = 3; % Start rect_id at 3 for non-critical distractors
         end
         
-        %set these as nan because on some trials there will be less than 6 non-critical distractors
-        noncrit_rect6 = nan;
-        noncrit_ind6 = nan;
+        %set these as nan because trials with a critical distractor only have 4 non-critical distractors
+        noncrit_rect5 = nan;
+        noncrit_ind5 = nan;
 
         for k = 1:numel(remaining_positions)
             this_pos  = remaining_positions(k);       % map TYPE → POSITION
@@ -522,9 +532,6 @@ for run_looper = run_num:total_runs
             elseif k == 5
                 noncrit_rect5 = this_rect;
                 noncrit_ind5 = distractor_texture_index;
-            elseif k == 6
-                noncrit_rect6 = this_rect;
-                noncrit_ind6 = distractor_texture_index;
             end
 
             if eyetracking
@@ -582,7 +589,14 @@ for run_looper = run_num:total_runs
             Eyelink('Message', 'START_TIME SEARCH_PERIOD');
             Eyelink('Message', 'SYNCTIME');
             Eyelink('Message', '!V TRIAL_VAR condition %d', trial_condition);
-            Eyelink('Message', '!V TRIAL_VAR color %d', colors(trial_looper));
+            % colors is NaN on distractor-absent trials, and NaN cannot be
+            % sent through %d, so send 0 when no colored distractor is shown
+            if run_looper > 1 && trial_condition ~= 0
+                trial_color = colors(trial_looper);
+            else
+                trial_color = 0;
+            end
+            Eyelink('Message', '!V TRIAL_VAR color %d', trial_color);
             Eyelink('Message', '!V TRIAL_VAR trial_num %d', trial_looper);
             Eyelink('Message', '!V TRIAL_VAR sub_num %d', sub_num);
             Eyelink('Message', '!V TRIAL_VAR block %d', run_looper);
@@ -673,8 +687,6 @@ for run_looper = run_num:total_runs
         bx_trial_info(trial_looper).noncritical_distractor_rect4  = noncrit_rect4;
         bx_trial_info(trial_looper).noncritical_distractor_idx5   = noncrit_ind5;
         bx_trial_info(trial_looper).noncritical_distractor_rect5  = noncrit_rect5;
-        bx_trial_info(trial_looper).noncritical_distractor_idx6   = noncrit_ind6;
-        bx_trial_info(trial_looper).noncritical_distractor_rect6  = noncrit_rect6;
 
         % Condition / stimulus info
         bx_trial_info(trial_looper).condition   = trial_condition;
@@ -763,7 +775,7 @@ for run_looper = run_num:total_runs
     % save trial data to CSV
     trialTable = struct2table(bx_trial_info);
     % Define filenames with formatting
-    csv_filename = sprintf('Subj%dRun%02d.csv', sub_num, run_looper);
+    csv_filename = sprintf(bx_file_format, sub_num, run_looper);
     MAT_filename = sprintf('Subj%dRun%02d.mat', sub_num, run_looper);
     
     % Combine with folder
@@ -802,32 +814,58 @@ pfp_ptb_cleanup; % cleanup PTB
 sca; % close PTB
 
 function ok = transferEDF(edf_file_name, edf_output_folder_name, eyetracking, window, el, height)
+% Pulls the EDF from the Host PC and only reports success when the local
+% file is the same size as the file the tracker says it sent.
 ok = false;
 if ~eyetracking, return; end
+
+% Drop out of realtime priority while the file comes over the network
+oldPriority = Priority(0);
 try
     Screen('FillRect', window, el.backgroundcolour);
     Screen('DrawText', window, 'Receiving data file...', 5, height-35, 0);
     Screen('Flip', window);
 
-    localPath = fullfile(edf_output_folder_name, edf_file_name);
+    % Full destination FILE path (absolute, so it does not depend on cwd)
+    localPath = fullfile(pwd, edf_output_folder_name, edf_file_name);
     maxTries  = 5;
     for attempt = 1:maxTries
         if ~Eyelink('IsConnected')
             warning('Link down before transfer attempt %d', attempt);
-            WaitSecs(1); 
+            WaitSecs(1);
             continue;
         end
-        status = Eyelink('ReceiveFile', edf_file_name, localPath, 1);
-        if status > 0 && exist(localPath, 'file')
+
+        % Remove any partial file left by a previous attempt
+        if isfile(localPath)
+            delete(localPath);
+        end
+
+        % 3rd arg = 0: localPath is the destination file itself. (With 1 it
+        % is treated as a folder and the file name is appended to it.)
+        status = Eyelink('ReceiveFile', edf_file_name, localPath, 0);
+
+        % status is the size in bytes of the file on the Host PC
+        info = dir(localPath);
+        if isempty(info)
+            localBytes = 0;
+        else
+            localBytes = info(1).bytes;
+        end
+
+        if status > 0 && localBytes == status
             fprintf('EDF transfer succeeded (attempt %d): %.1f KB\n', attempt, status/1024);
             ok = true;
-            return;
+            break;
         end
-        warning('EDF transfer attempt %d failed (status %d), retrying...', attempt, status);
+        warning('EDF transfer attempt %d incomplete (status %d, %d bytes on disk), retrying...', attempt, status, localBytes);
         WaitSecs(1 + attempt);   % escalating wait
     end
-    warning('EDF transfer FAILED after %d attempts. File may still be on Host PC: %s', maxTries, edf_file_name);
+    if ~ok
+        warning('EDF transfer FAILED after %d attempts. File may still be on Host PC: %s', maxTries, edf_file_name);
+    end
 catch ME
     warning('Problem receiving EDF ''%s'': %s', edf_file_name, ME.message);
 end
+Priority(oldPriority);
 end
