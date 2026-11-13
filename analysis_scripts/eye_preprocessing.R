@@ -40,7 +40,9 @@ dir.create(eye_folder, showWarnings = FALSE, recursive = TRUE)
 
 # ======= STEP 1: EDF -> ASC =====================
 convert_edf_to_asc <- function(edf_folder, asc_folder) {
-  edf_files <- list.files(edf_folder, pattern = "\\.edf$", full.names = TRUE, ignore.case = TRUE)
+  # recursive: the older transfers saved each file inside a folder of the same
+  # name (edf_data/RSS10R2.edf/RSS10R2.edf); newer ones sit directly in edf_data
+  edf_files <- list.files(edf_folder, pattern = "\\.edf$", full.names = TRUE, ignore.case = TRUE, recursive = TRUE)
   asc_names <- paste0(tools::file_path_sans_ext(basename(edf_files)), ".asc")
   todo      <- edf_files[!file.exists(file.path(asc_folder, asc_names))]
   if (length(todo) == 0) {

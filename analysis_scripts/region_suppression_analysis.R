@@ -28,7 +28,8 @@ data_root     <- Sys.getenv("RS_DATA_ROOT", "../data")
 bx_folder     <- file.path(data_root, "bx_data")
 fixation_file <- file.path(data_root, "eye_data", "fixations_search_period.csv")
 
-required_runs    <- 7      # practice + 6 main runs
+required_main_runs <- 6   # main runs a subject needs to be included (practice, run 1, is not counted:
+                          # the practice file was not saved for most subjects)
 min_accuracy     <- 0.80   # overall accuracy cutoff (main runs)
 min_rt           <- 200    # ms, hard lower bound
 sd_cutoff        <- 3      # RTs beyond this many SDs are removed
@@ -57,7 +58,7 @@ all_imported_bx_files <- raw_imported_bx_files %>%
 # ======= RUN SUMMARY & ACCURACY =====================
 unique_run_summary <- raw_imported_bx_files %>%
   group_by(sub_num) %>%
-  summarise(unique_runs = n_distinct(run_num),
+  summarise(unique_runs = n_distinct(run_num[run_num != 1]),   # main runs only
             overall_accuracy = mean(accuracy[run_num != 1] == 1, na.rm = TRUE),
             .groups = "drop")
 print(unique_run_summary, n = Inf)
@@ -66,7 +67,7 @@ print(unique_run_summary, n = Inf)
 all_bx_files <- all_imported_bx_files %>%
   left_join(unique_run_summary, by = "sub_num") %>%
   # --- Basic inclusion filters ---
-  filter(unique_runs == required_runs,
+  filter(unique_runs >= required_main_runs,
          overall_accuracy > min_accuracy,
          !sub_num %in% excluded_subs) %>%
   # --- Remove RT outliers within participant and condition ---
@@ -97,7 +98,7 @@ bx_summary <- all_bx_files %>%
             n_trials = n(),
             .groups = "drop")
 
-table(bx_summary$DistractorLocation) # checks to make sure that we have balanced data
+print(table(bx_summary$DistractorLocation)) # checks to make sure that we have balanced data
 
 # ---- helper: one-way repeated measures ANOVA + follow-ups ----
 # NOTE: aov() does not apply a sphericity correction. With 3 levels that can
@@ -134,8 +135,8 @@ aov_ACC <- run_rm_anova(bx_summary, "meanACC")
 # ======= SINGLE-TRIAL LOG RT =======
 lmer_data <- all_bx_files %>% filter(!is.na(log_rt))
 lmer_RT <- lmer(log_rt ~ DistractorLocation + (1 | sub_num) + (1 | scene_idx), data = lmer_data)
-summary(lmer_RT)
-emmeans(lmer_RT, pairwise ~ DistractorLocation)
+print(summary(lmer_RT))
+print(emmeans(lmer_RT, pairwise ~ DistractorLocation))
 
 #======================= EYETRACKING ANALYSIS =========================
 if (!file.exists(fixation_file)) {
