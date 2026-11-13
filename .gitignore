@@ -2,7 +2,7 @@
 *.asv
 *.m~
 *.fig
-#*.mat
+*.mat
 *.mex*
 *.mdl
 *.slx
@@ -54,6 +54,7 @@ tester.m
 *.csv
 *.tsv
 *.xlsx
+*.txt
 
 # Ignore results and figures
 /results/
@@ -68,3 +69,25 @@ survey.m
 
 # Python virtual environments
 **/.venv/
+*.pyc
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Generated analysis outputs
+analysis_scripts/model_fits/
+scene_color_correction/output/
+
+# Raw eye-tracking data
+data/asc_data/
+data/edf_data/
+
+# macOS
+.DS_Store
