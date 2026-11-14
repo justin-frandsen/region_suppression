@@ -175,12 +175,15 @@ instruction_shapes = fullfile('stimuli', 'shapes', 'instructions');
 black_shapes       = fullfile('stimuli', 'shapes', 'transparent_black');
 left_shapes        = fullfile('stimuli', 'shapes', 'Black_Left_T');
 right_shapes       = fullfile('stimuli', 'shapes', 'Black_Right_T');
-green_left_shapes  = fullfile('stimuli', 'shapes', 'Green_Left_T');
-green_right_shapes = fullfile('stimuli', 'shapes', 'Green_Right_T');
-blue_left_shapes   = fullfile('stimuli', 'shapes', 'Blue_Left_T');
-blue_right_shapes  = fullfile('stimuli', 'shapes', 'Blue_Right_T');
-mag_left_shapes    = fullfile('stimuli', 'shapes', 'Mag_Left_T');
-mag_right_shapes   = fullfile('stimuli', 'shapes', 'Mag_Right_T');
+% Colored critical distractors: equal lightness (L* = 65) and chroma, hues
+% 120 degrees apart. Made by setup/make_colored_shapes.py.
+% (The old colors are still in Mag_*, Green_* and Blue_*_T.)
+green_left_shapes  = fullfile('stimuli', 'shapes', 'SeaGreen_Left_T');
+green_right_shapes = fullfile('stimuli', 'shapes', 'SeaGreen_Right_T');
+blue_left_shapes   = fullfile('stimuli', 'shapes', 'SkyBlue_Left_T');
+blue_right_shapes  = fullfile('stimuli', 'shapes', 'SkyBlue_Right_T');
+coral_left_shapes  = fullfile('stimuli', 'shapes', 'Coral_Left_T');
+coral_right_shapes = fullfile('stimuli', 'shapes', 'Coral_Right_T');
 
 [sorted_instruction_shapes_file_paths, sorted_instruction_shapes_textures] = image_stimuli_import(instruction_shapes, '*.png', w, true);
 [sorted_left_shapes_file_paths, sorted_left_shapes_textures] = image_stimuli_import(left_shapes, '*.png', w, true);
@@ -188,9 +191,9 @@ mag_right_shapes   = fullfile('stimuli', 'shapes', 'Mag_Right_T');
 
 [sorted_black_shapes_file_paths, sorted_black_shapes_textures] = image_stimuli_import(black_shapes, '*.png', w, true); %cue shapes
 
-%magenta shapes
-[sorted_left_mag_shapes_file_paths, sorted_left_mag_shapes_textures]     = image_stimuli_import(mag_left_shapes, '*.png', w, true);
-[sorted_right_mag_shapes_file_paths, sorted_right_mag_shapes_textures]     = image_stimuli_import(mag_right_shapes, '*.png', w, true);
+%coral shapes
+[sorted_left_coral_shapes_file_paths, sorted_left_coral_shapes_textures]     = image_stimuli_import(coral_left_shapes, '*.png', w, true);
+[sorted_right_coral_shapes_file_paths, sorted_right_coral_shapes_textures]     = image_stimuli_import(coral_right_shapes, '*.png', w, true);
 %green shapes
 [sorted_left_green_shapes_file_paths, sorted_left_green_shapes_textures] = image_stimuli_import(green_left_shapes, '*.png', w, true);
 [sorted_right_green_shapes_file_paths, sorted_right_green_shapes_textures] = image_stimuli_import(green_right_shapes, '*.png', w, true);
@@ -466,25 +469,25 @@ for run_looper = run_num:total_runs
             if trial_t_directions(6) == 0
                 % left critical distractor
                 if colors(trial_looper) == 1
-                    % green critical distractor
-                    Screen('DrawTexture', search, sorted_left_mag_shapes_textures(crit_inds), [], crit_rect);
+                    % color 1 = coral
+                    Screen('DrawTexture', search, sorted_left_coral_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 2
-                    % blue critical distractor
+                    % color 2 = sea green
                     Screen('DrawTexture', search, sorted_left_green_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 3
-                    % magenta critical distractor
+                    % color 3 = sky blue
                     Screen('DrawTexture', search, sorted_left_blue_shapes_textures(crit_inds), [], crit_rect);
                 end
             elseif trial_t_directions(6) == 1
                 % right critical distractor
                 if colors(trial_looper) == 1
-                    % green critical distractor
-                    Screen('DrawTexture', search, sorted_right_mag_shapes_textures(crit_inds), [], crit_rect);
+                    % color 1 = coral
+                    Screen('DrawTexture', search, sorted_right_coral_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 2
-                    % blue critical distractor
+                    % color 2 = sea green
                     Screen('DrawTexture', search, sorted_right_green_shapes_textures(crit_inds), [], crit_rect);
                 elseif colors(trial_looper) == 3
-                    % magenta critical distractor
+                    % color 3 = sky blue
                     Screen('DrawTexture', search, sorted_right_blue_shapes_textures(crit_inds), [], crit_rect);
                 end
             end

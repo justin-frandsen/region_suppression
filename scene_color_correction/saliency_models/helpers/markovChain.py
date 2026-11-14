@@ -7,7 +7,9 @@ def solve(mat, tolerance):
     oldv = v
     oldoldv = v
 
-    while diff > tolerance :
+    iterations = 0
+    while diff > tolerance and iterations < 5000:   # cap: a chain that never settles would loop forever
+        iterations += 1
         oldv = v
         oldoldv = oldv
         v = np.dot(mat,v)

@@ -17,8 +17,10 @@ its resources with a relative path):
     cd scene_color_correction
     python3 distractor_saliency_check.py            # 300 trials
     python3 distractor_saliency_check.py 600        # more trials
+    python3 distractor_saliency_check.py 300 new    # same trials, with the new equal-lightness colors
+    python3 distractor_saliency_check.py 300 new gray   # ... on grayscale scenes
 
-Outputs (scene_color_correction/output/saliency_check/):
+Outputs (scene_color_correction/output/saliency_check/, or saliency_check_new/ for the new colors):
     saliency_results.csv   one row per sampled trial
     rendered/              the rendered displays (as shown in the experiment)
     overlays/              a few displays with their GBVS map, for eyeballing
@@ -51,10 +53,15 @@ REPO = os.path.abspath("..")
 BX_DIR = os.path.join(REPO, "data", "bx_data")
 MAT_DIR = os.path.join(REPO, "data", "MAT_data")
 SHAPE_DIR = os.path.join(REPO, "stimuli", "shapes")
-OUT_DIR = os.path.join("output", "saliency_check")
-
-# color code -> what region_suppression.m actually draws
-COLOR_NAMES = {1: "Mag", 2: "Green", 3: "Blue"}
+# color code -> shape folder prefix. "old" = the colors the collected data were run with,
+# "new" = the equal-lightness colors made by setup/make_colored_shapes.py
+COLOR_SET = sys.argv[2] if len(sys.argv) > 2 else "old"
+COLOR_NAMES = {"old": {1: "Mag", 2: "Green", 3: "Blue"},
+               "new": {1: "Coral", 2: "SeaGreen", 3: "SkyBlue"}}[COLOR_SET]
+# "color" = scenes as they are, "gray" = scenes converted to grayscale (shapes keep their color)
+SCENE_MODE = sys.argv[3] if len(sys.argv) > 3 else "color"
+OUT_DIR = os.path.join("output", "saliency_check" + ("" if COLOR_SET == "old" else f"_{COLOR_SET}")
+                       + ("" if SCENE_MODE == "color" else f"_{SCENE_MODE}_scenes"))
 
 
 # ---------------------------------------------------------------- helpers
@@ -74,7 +81,7 @@ def shape_files(folder):
 
 def load_shape(index, direction, color=None):
     """index: 1-22 (texture index used by the experiment), direction: 0 = left T, 1 = right T,
-    color: None (black) / 'Mag' / 'Green' / 'Blue'."""
+    color: None (black) or a folder prefix from COLOR_NAMES."""
     side = "Left" if direction == 0 else "Right"
     folder = f"{'Black' if color is None else color}_{side}_T"
     path = os.path.join(SHAPE_DIR, folder, shape_files(folder)[index - 1])
@@ -85,12 +92,17 @@ def load_shape(index, direction, color=None):
 
 
 def draw_shape(canvas, shape, rect):
-    """Alpha-blend a shape into rect = [left, top, right, bottom] (like Screen('DrawTexture'))."""
+    """Alpha-blend a shape into rect = [left, top, right, bottom] (like Screen('DrawTexture')).
+    A few rects run a couple of pixels past the screen edge; that part is simply not drawn."""
     left, top, right, bottom = [int(round(v)) for v in rect]
     shape = cv2.resize(shape, (right - left, bottom - top), interpolation=cv2.INTER_AREA)
+    # part of the rect that is on screen
+    x0, y0 = max(left, 0), max(top, 0)
+    x1, y1 = min(right, canvas.shape[1]), min(bottom, canvas.shape[0])
+    shape = shape[y0 - top:y1 - top, x0 - left:x1 - left]
     alpha = shape[:, :, 3:4].astype(np.float32) / 255.0
-    region = canvas[top:bottom, left:right].astype(np.float32)
-    canvas[top:bottom, left:right] = (alpha * shape[:, :, :3] + (1 - alpha) * region).astype(np.uint8)
+    region = canvas[y0:y1, x0:x1].astype(np.float32)
+    canvas[y0:y1, x0:x1] = (alpha * shape[:, :, :3] + (1 - alpha) * region).astype(np.uint8)
 
 
 def rect_of(row, prefix):
@@ -106,6 +118,8 @@ def render_trial(row, t_dirs, colored):
     if scene is None:
         raise FileNotFoundError(row["scene_file"])
     canvas = cv2.resize(scene, (SCREEN_W, SCREEN_H), interpolation=cv2.INTER_AREA)
+    if SCENE_MODE == "gray":
+        canvas = cv2.cvtColor(cv2.cvtColor(canvas, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
 
     # target: T direction is column 1
     draw_shape(canvas, load_shape(int(row["target_shape_idx"]), int(t_dirs[0])), rect_of(row, "target_rect"))
@@ -124,6 +138,7 @@ def render_trial(row, t_dirs, colored):
 def region_percentile(sal_map, rect):
     """Percentile (0-100) of the mean saliency inside rect, relative to all pixels of the map."""
     left, top, right, bottom = [int(round(v)) for v in rect]
+    left, top = max(left, 0), max(top, 0)   # slicing already stops at the right/bottom edge
     value = sal_map[top:bottom, left:right].mean()
     return 100.0 * (sal_map < value).mean()
 

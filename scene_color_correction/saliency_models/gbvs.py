@@ -68,6 +68,11 @@ def run(image, params):
 
     for i in range(0,4):
         for map in featMaps[i]:
+            # A flat feature map (e.g. the color channels of a grayscale image)
+            # carries no saliency information; it is left out, because the
+            # Markov chain cannot be solved for it.
+            if np.ptp(map) < 1e-6:
+                continue
             activationMaps.append(graphBasedActivation.calculate(map, activation_sigma))
 
 
@@ -77,6 +82,11 @@ def run(image, params):
     normalisation_sigma = params['sigma_frac_norm']*np.mean([32, 28])
 
     for map in activationMaps:
+        # A completely flat feature map (e.g. the color channels of a grayscale
+        # image) gives an all-NaN activation map. It carries no saliency
+        # information, so it is left out instead of crashing.
+        if not np.all(np.isfinite(map)):
+            continue
         normalisedActivationMaps.append(graphBasedActivation.normalize(map, normalisation_sigma))
 
 
